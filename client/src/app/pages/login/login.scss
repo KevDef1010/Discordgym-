@@ -1,0 +1,69 @@
+// Login/Register Page Styles
+
+// Custom animations and improvements
+.login-page {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Form mode switching animation
+.form-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// Enhanced focus states
+.enhanced-input:focus {
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+  transform: scale(1.02);
+}
+
+// Smooth hover effects
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+// Loading spinner
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Discord brand colors
+.discord-gradient {
+  background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+}
+
+.discord-gradient:hover {
+  background: linear-gradient(135deg, #4752c4 0%, #3c45a5 100%);
+}
+
+// Error state animations
+.error-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}

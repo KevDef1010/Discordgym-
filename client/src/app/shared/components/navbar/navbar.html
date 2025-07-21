@@ -15,12 +15,20 @@
         <a href="#pricing" class="text-gray-300 hover:text-white transition-colors">Pricing</a>
         <a href="#about" class="text-gray-300 hover:text-white transition-colors">About</a>
         
-        <app-button 
-          variant="primary" 
-          size="small"
-          (click)="joinDiscord()">
-          Join Discord
-        </app-button>
+        <div class="flex items-center space-x-4">
+          <app-button 
+            variant="outline" 
+            size="small"
+            (click)="navigateToLogin()">
+            Login
+          </app-button>
+          <app-button 
+            variant="primary" 
+            size="small"
+            (click)="joinDiscord()">
+            Join Us!
+          </app-button>
+        </div>
       </div>
 
       <!-- Mobile menu button -->
@@ -42,7 +50,13 @@
         <a href="#features" class="block px-3 py-2 text-gray-300 hover:text-white transition-colors">Features</a>
         <a href="#pricing" class="block px-3 py-2 text-gray-300 hover:text-white transition-colors">Pricing</a>
         <a href="#about" class="block px-3 py-2 text-gray-300 hover:text-white transition-colors">About</a>
-        <div class="px-3 py-2">
+        <div class="px-3 py-2 space-y-2">
+          <app-button 
+            variant="outline" 
+            size="small"
+            (click)="navigateToLogin()">
+            Login
+          </app-button>
           <app-button 
             variant="primary" 
             size="small"

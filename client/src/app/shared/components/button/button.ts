@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'success';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'success';
 export type ButtonSize = 'small' | 'medium' | 'large';
 
 @Component({
@@ -13,6 +13,7 @@ export class ButtonComponent {
   @Input() variant: ButtonVariant = 'primary';
   @Input() size: ButtonSize = 'medium';
   @Input() disabled: boolean = false;
+  @Input() type: 'button' | 'submit' | 'reset' = 'button';
   @Output() onClick = new EventEmitter<MouseEvent>();
 
   get buttonClasses(): string {
@@ -21,6 +22,7 @@ export class ButtonComponent {
     const variantClasses = {
       primary: 'bg-purple-600 hover:bg-purple-700 text-white focus:ring-purple-500',
       secondary: 'bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500',
+      outline: 'border border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white focus:ring-purple-500',
       danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
       success: 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500'
     };
