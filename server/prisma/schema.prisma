@@ -1,0 +1,197 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// User Model - Discord users who use DiscordGym
+model User {
+  id          String   @id @default(cuid())
+  discordId   String   @unique // Discord User ID
+  username    String
+  email       String   @unique
+  avatar      String?  // Discord avatar URL
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  workouts    Workout[]
+  servers     ServerMember[]
+  challenges  UserChallenge[]
+  progress    Progress[]
+  
+  @@map("users")
+}
+
+// Discord Server Model
+model Server {
+  id          String   @id @default(cuid())
+  discordId   String   @unique // Discord Server ID
+  name        String
+  icon        String?  // Discord server icon URL
+  ownerId     String   // Discord User ID of server owner
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  members     ServerMember[]
+  challenges  Challenge[]
+  
+  @@map("servers")
+}
+
+// Server Membership
+model ServerMember {
+  id        String   @id @default(cuid())
+  userId    String
+  serverId  String
+  role      MemberRole @default(MEMBER)
+  joinedAt  DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverId])
+  @@map("server_members")
+}
+
+// Workout Model
+model Workout {
+  id          String      @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  type        WorkoutType
+  duration    Int?        // Duration in minutes
+  caloriesBurned Int?
+  date        DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises   Exercise[]
+  
+  @@map("workouts")
+}
+
+// Exercise Model
+model Exercise {
+  id          String   @id @default(cuid())
+  workoutId   String
+  name        String
+  sets        Int?
+  reps        Int?
+  weight      Float?   // Weight in kg
+  distance    Float?   // Distance in km
+  duration    Int?     // Duration in seconds
+  notes       String?
+  order       Int      @default(0)
+
+  // Relations
+  workout     Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  
+  @@map("exercises")
+}
+
+// Challenge Model
+model Challenge {
+  id          String      @id @default(cuid())
+  serverId    String
+  name        String
+  description String
+  type        ChallengeType
+  target      Float       // Target value (steps, weight, distance, etc.)
+  unit        String      // Unit of measurement
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  server      Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  participants UserChallenge[]
+  
+  @@map("challenges")
+}
+
+// User Challenge Participation
+model UserChallenge {
+  id          String   @id @default(cuid())
+  userId      String
+  challengeId String
+  progress    Float    @default(0) // Current progress
+  completed   Boolean  @default(false)
+  joinedAt    DateTime @default(now())
+  completedAt DateTime?
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+  @@map("user_challenges")
+}
+
+// Progress Tracking
+model Progress {
+  id        String       @id @default(cuid())
+  userId    String
+  type      ProgressType
+  value     Float        // Weight, body fat %, muscle mass, etc.
+  unit      String       // kg, %, cm, etc.
+  date      DateTime     @default(now())
+  notes     String?
+  createdAt DateTime     @default(now())
+
+  // Relations
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("progress")
+}
+
+// Enums
+enum MemberRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum WorkoutType {
+  CARDIO
+  STRENGTH
+  FLEXIBILITY
+  SPORTS
+  HIIT
+  YOGA
+  CROSSFIT
+  OTHER
+}
+
+enum ChallengeType {
+  STEPS
+  DISTANCE
+  WEIGHT_LOSS
+  WORKOUT_COUNT
+  DURATION
+  CALORIES
+  CUSTOM
+}
+
+enum ProgressType {
+  WEIGHT
+  BODY_FAT
+  MUSCLE_MASS
+  MEASUREMENTS
+  OTHER
+}
