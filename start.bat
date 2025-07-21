@@ -1,23 +1,41 @@
 @echo off
-echo Starting DiscordGym Full-Stack Application...
+echo 🏋️ Starting DiscordGym Application...
 echo.
 
-echo Installing dependencies...
+echo 📦 Installing dependencies...
 cd client
-call npm install
+if not exist "node_modules" (
+    echo Installing frontend dependencies...
+    call npm install
+)
 cd ..\server
-call npm install
+if not exist "node_modules" (
+    echo Installing backend dependencies...
+    call npm install
+)
+
+echo 🗄️ Setting up database...
+call npx prisma db push --accept-data-loss 2>nul || echo Database already up to date
+call npx prisma generate 2>nul || echo Prisma client already generated
+
 cd ..
-
 echo.
-echo Starting Frontend and Backend...
-start "Angular Frontend" cmd /k "cd client && npm start"
-start "NestJS Backend" cmd /k "cd server && npm run start:dev"
-
+echo 🚀 Starting servers...
+echo Backend: http://localhost:3000
+echo Frontend: http://localhost:4200
+echo 📱 Open http://localhost:4200 in your browser
 echo.
-echo Applications starting...
-echo Frontend: http://localhost:4200/
-echo Backend:  http://localhost:3000/
+
+start "🏋️ Backend Server" cmd /k "cd server && npm start"
+timeout /t 3 /nobreak > nul
+start "🌐 Frontend Server" cmd /k "cd client && npm start"
+
+echo ✅ Servers are starting...
+echo ✅ Backend: http://localhost:3000
+echo ✅ Frontend: http://localhost:4200
+echo.
+echo 🛑 Close the terminal windows to stop servers
+echo 📖 See START-GUIDE.md for detailed instructions
 echo.
 echo Press any key to close this window...
 pause >nul

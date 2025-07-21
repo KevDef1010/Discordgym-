@@ -14,8 +14,9 @@ datasource db {
 model User {
   id          String   @id @default(cuid())
   discordId   String   @unique // Discord User ID
-  username    String
+  username    String   @unique
   email       String   @unique
+  password    String?  // Hashed password for registration
   avatar      String?  // Discord avatar URL
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

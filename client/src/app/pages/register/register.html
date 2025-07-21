@@ -5,16 +5,33 @@
       <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-blue-500">
         <span class="text-white text-2xl font-bold">🏋️</span>
       </div>
-      <h2 class="mt-6 text-3xl font-extrabold text-white">Welcome back</h2>
+      <h2 class="mt-6 text-3xl font-extrabold text-white">Join DiscordGym</h2>
       <p class="mt-2 text-sm text-gray-300">
-        Sign in to your DiscordGym account
+        Create your account and start your fitness journey
       </p>
     </div>
 
     <!-- Form -->
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="mt-8 space-y-6">
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="mt-8 space-y-6">
       <div class="rounded-md shadow-sm space-y-4">
         
+        <!-- Username -->
+        <div>
+          <label for="username" class="sr-only">Username</label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            formControlName="username"
+            placeholder="Username (3-20 characters)"
+            class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-600 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            [class.border-red-500]="hasFieldError('username')"
+          />
+          <p *ngIf="hasFieldError('username')" class="mt-1 text-sm text-red-400">
+            {{ getFieldError('username') }}
+          </p>
+        </div>
+
         <!-- Email -->
         <div>
           <label for="email" class="sr-only">Email address</label>
@@ -40,16 +57,16 @@
             id="password"
             name="password"
             [type]="showPassword ? 'text' : 'password'"
-            autocomplete="current-password"
+            autocomplete="new-password"
             formControlName="password"
-            placeholder="Password"
+            placeholder="Password (min. 6 characters)"
             class="appearance-none rounded-lg relative block w-full px-3 py-2 pr-10 border border-gray-600 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             [class.border-red-500]="hasFieldError('password')"
           />
           <button
             type="button"
             class="absolute inset-y-0 right-0 pr-3 flex items-center"
-            (click)="togglePasswordVisibility()"
+            (click)="togglePasswordVisibility('password')"
           >
             <span class="text-gray-400 hover:text-white">
               {{ showPassword ? '🙈' : '👁️' }}
@@ -60,27 +77,53 @@
           </p>
         </div>
 
-        <!-- Remember Me -->
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <input
-              id="remember"
-              name="remember"
-              type="checkbox"
-              formControlName="remember"
-              class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-            />
-            <label for="remember" class="ml-2 block text-sm text-gray-300">
-              Remember me
-            </label>
-          </div>
-          
-          <div class="text-sm">
-            <a href="#" class="font-medium text-purple-400 hover:text-purple-300">
-              Forgot your password?
-            </a>
-          </div>
+        <!-- Confirm Password -->
+        <div class="relative">
+          <label for="confirmPassword" class="sr-only">Confirm Password</label>
+          <input
+            id="confirmPassword"
+            name="confirmPassword"
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            autocomplete="new-password"
+            formControlName="confirmPassword"
+            placeholder="Confirm password"
+            class="appearance-none rounded-lg relative block w-full px-3 py-2 pr-10 border border-gray-600 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            [class.border-red-500]="hasFieldError('confirmPassword')"
+          />
+          <button
+            type="button"
+            class="absolute inset-y-0 right-0 pr-3 flex items-center"
+            (click)="togglePasswordVisibility('confirmPassword')"
+          >
+            <span class="text-gray-400 hover:text-white">
+              {{ showConfirmPassword ? '🙈' : '👁️' }}
+            </span>
+          </button>
+          <p *ngIf="hasFieldError('confirmPassword')" class="mt-1 text-sm text-red-400">
+            {{ getFieldError('confirmPassword') }}
+          </p>
         </div>
+
+        <!-- Terms Checkbox -->
+        <div class="flex items-center">
+          <input
+            id="acceptTerms"
+            name="acceptTerms"
+            type="checkbox"
+            formControlName="acceptTerms"
+            class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+          />
+          <label for="acceptTerms" class="ml-2 block text-sm text-gray-300">
+            I accept the 
+            <a href="#" class="text-purple-400 hover:text-purple-300">Terms of Service</a>
+            and 
+            <a href="#" class="text-purple-400 hover:text-purple-300">Privacy Policy</a>
+          </label>
+        </div>
+        <p *ngIf="registerForm.get('acceptTerms')?.touched && registerForm.get('acceptTerms')?.errors" 
+           class="text-sm text-red-400">
+          You must accept the terms and conditions
+        </p>
       </div>
 
       <!-- Error/Success Messages -->
@@ -96,29 +139,29 @@
       <div>
         <button
           type="submit"
-          [disabled]="isLoading || !loginForm.valid"
+          [disabled]="isLoading || !registerForm.valid"
           class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
         >
           <span *ngIf="!isLoading" class="flex items-center">
             <span class="mr-2">🚀</span>
-            Sign in
+            Create Account
           </span>
           <span *ngIf="isLoading" class="flex items-center">
             <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            Signing in...
+            Creating Account...
           </span>
         </button>
       </div>
 
-      <!-- Register Link -->
+      <!-- Login Link -->
       <div class="text-center">
         <p class="text-sm text-gray-300">
-          Don't have an account?
-          <a routerLink="/register" class="font-medium text-purple-400 hover:text-purple-300 transition-colors">
-            Create one here
+          Already have an account?
+          <a routerLink="/login" class="font-medium text-purple-400 hover:text-purple-300 transition-colors">
+            Sign in here
           </a>
         </p>
       </div>

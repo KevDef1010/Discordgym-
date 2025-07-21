@@ -1,6 +1,56 @@
-# DiscordGym
+# 🏋️ DiscordGym - Full-Stack Fitness Application
 
-Eine vollständige Full-Stack-Anwendung mit Angular Frontend und NestJS Backend.
+Eine moderne Full-Stack Webanwendung mit **Angular Frontend** und **NestJS Backend** für Discord-basierte Fitness-Communities.
+
+## 🚀 Quick Start für Professor
+
+### **Option 1: Automatischer Start (empfohlen)**
+```bash
+# Windows:
+double-click start.bat
+
+# Linux/Mac:
+./start.sh
+```
+
+### **Option 2: Manueller Start**
+```bash
+# Terminal 1 - Backend:
+cd server
+npm install
+npm start
+
+# Terminal 2 - Frontend:  
+cd client
+npm install
+npm start
+```
+
+### **Demo öffnen:**
+- **Frontend:** http://localhost:4200
+- **Backend API:** http://localhost:3000
+
+---
+
+## 🎯 Demo-Anleitung
+
+### **1. Registrierung testen:**
+- Gehe zu http://localhost:4200/register
+- Fülle aus: Username, Email, Password
+- Discord ID wird automatisch generiert! ✨
+
+### **2. Dashboard erleben:**
+- Automatische Weiterleitung nach Registrierung
+- Personalisierte Fitness-Statistiken
+- Recent Workouts & Active Challenges
+
+### **3. API testen:**
+```bash
+curl http://localhost:3000/health
+curl http://localhost:3000/database/stats
+```
+
+---
 
 ## 📋 Projektübersicht
 

@@ -17,7 +17,8 @@ export class UserController {
 
   @Post()
   async createUser(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    return await this.userService.create(createUserDto);
   }
 
   @Get()
@@ -27,17 +28,17 @@ export class UserController {
   ) {
     const takeNum = take ? parseInt(take) : undefined;
     const skipNum = skip ? parseInt(skip) : undefined;
-    return this.userService.findAll(takeNum, skipNum);
+    return await this.userService.findAll(takeNum, skipNum);
   }
 
   @Get(':id')
   async getUserById(@Param('id') id: string) {
-    return this.userService.findOne(id);
+    return await this.userService.findOne(id);
   }
 
   @Get('discord/:discordId')
   async getUserByDiscordId(@Param('discordId') discordId: string) {
-    return this.userService.findByDiscordId(discordId);
+    return await this.userService.findByDiscordId(discordId);
   }
 
   @Put(':id')
@@ -45,21 +46,22 @@ export class UserController {
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    return this.userService.update(id, updateUserDto);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    return await this.userService.update(id, updateUserDto);
   }
 
   @Delete(':id')
   async deleteUser(@Param('id') id: string) {
-    return this.userService.remove(id);
+    return await this.userService.remove(id);
   }
 
   @Get(':id/workouts')
   async getUserWorkouts(@Param('id') id: string) {
-    return this.userService.getUserWorkouts(id);
+    return await this.userService.getUserWorkouts(id);
   }
 
   @Get(':id/progress')
   async getUserProgress(@Param('id') id: string) {
-    return this.userService.getUserProgress(id);
+    return await this.userService.getUserProgress(id);
   }
 }
