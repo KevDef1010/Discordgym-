@@ -1,0 +1,56 @@
+<nav class="bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <!-- Logo -->
+      <div class="flex items-center">
+        <a href="/" class="text-2xl font-bold text-white">
+          Discord<span class="text-purple-400">Gym</span>
+        </a>
+      </div>
+
+      <!-- Desktop Navigation -->
+      <div class="hidden md:flex items-center space-x-8">
+        <a href="#home" class="text-gray-300 hover:text-white transition-colors">Home</a>
+        <a href="#features" class="text-gray-300 hover:text-white transition-colors">Features</a>
+        <a href="#pricing" class="text-gray-300 hover:text-white transition-colors">Pricing</a>
+        <a href="#about" class="text-gray-300 hover:text-white transition-colors">About</a>
+        
+        <app-button 
+          variant="primary" 
+          size="small"
+          (click)="joinDiscord()">
+          Join Discord
+        </app-button>
+      </div>
+
+      <!-- Mobile menu button -->
+      <div class="md:hidden">
+        <button 
+          (click)="toggleMobileMenu()"
+          class="text-gray-400 hover:text-white transition-colors">
+          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div [class.hidden]="!isMobileMenuOpen" class="md:hidden">
+      <div class="px-2 pt-2 pb-3 space-y-1 bg-gray-800 rounded-lg mt-2">
+        <a href="#home" class="block px-3 py-2 text-gray-300 hover:text-white transition-colors">Home</a>
+        <a href="#features" class="block px-3 py-2 text-gray-300 hover:text-white transition-colors">Features</a>
+        <a href="#pricing" class="block px-3 py-2 text-gray-300 hover:text-white transition-colors">Pricing</a>
+        <a href="#about" class="block px-3 py-2 text-gray-300 hover:text-white transition-colors">About</a>
+        <div class="px-3 py-2">
+          <app-button 
+            variant="primary" 
+            size="small"
+            (click)="joinDiscord()">
+            Join Discord
+          </app-button>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
