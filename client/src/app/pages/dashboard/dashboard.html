@@ -1,35 +1,5 @@
 <div class="min-h-screen bg-gray-50">
-  <!-- Navigation Header -->
-  <nav class="bg-white shadow-sm border-b border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16">
-        <div class="flex items-center">
-          <div class="flex-shrink-0 flex items-center">
-            <span class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              🏋️ DiscordGym
-            </span>
-          </div>
-        </div>
-        
-        <div class="flex items-center space-x-4">
-          <div class="flex items-center space-x-3">
-            <img 
-              [src]="currentUser?.avatar" 
-              [alt]="currentUser?.username"
-              class="h-8 w-8 rounded-full object-cover"
-            >
-            <span class="text-gray-700 font-medium">{{ currentUser?.username }}</span>
-          </div>
-          <button 
-            (click)="logout()"
-            class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    </div>
-  </nav>
+  <!-- Dashboard content starts here -->
 
   <!-- Main Content -->
   <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">

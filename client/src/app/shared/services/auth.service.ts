@@ -10,6 +10,8 @@ export interface User {
   email: string;
   discordId: string;
   avatar: string;
+  role?: string;
+  isActive?: boolean;
   createdAt: string;
 }
 
