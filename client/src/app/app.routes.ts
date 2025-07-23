@@ -3,6 +3,8 @@ import { Home } from './pages/home/home';
 import { Login } from './pages/login/login';
 import { Register } from './pages/register/register';
 import { Dashboard } from './pages/dashboard/dashboard';
+import { ProfileComponent } from './pages/profile/profile';
+import { SettingsComponent } from './pages/settings/settings';
 import { AuthGuard, GuestGuard } from './shared/guards/auth.guard';
 
 export const routes: Routes = [
@@ -33,6 +35,18 @@ export const routes: Routes = [
     path: 'dashboard',
     component: Dashboard,
     title: 'DiscordGym - Dashboard',
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'profile',
+    component: ProfileComponent,
+    title: 'DiscordGym - Profil',
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'settings',
+    component: SettingsComponent,
+    title: 'DiscordGym - Einstellungen',
     canActivate: [AuthGuard]
   },
   {

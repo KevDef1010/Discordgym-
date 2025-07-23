@@ -4,18 +4,21 @@ import {
   IsNotEmpty,
   MinLength,
   IsOptional,
-  IsEnum,
+  IsIn,
 } from 'class-validator';
 
-export enum UserRole {
-  SUPER_ADMIN = 'SUPER_ADMIN',
-  ADMIN = 'ADMIN',
-  MODERATOR = 'MODERATOR',
-  TRAINER = 'TRAINER',
-  PREMIUM_USER = 'PREMIUM_USER',
-  MEMBER = 'MEMBER',
-  GUEST = 'GUEST',
-}
+// Define UserRole as string literals that match Prisma schema
+export const USER_ROLES = [
+  'SUPER_ADMIN',
+  'ADMIN',
+  'MODERATOR',
+  'TRAINER',
+  'PREMIUM_USER',
+  'MEMBER',
+  'GUEST',
+] as const;
+
+export type UserRole = (typeof USER_ROLES)[number];
 
 export class RegisterDto {
   @IsOptional()
@@ -40,7 +43,7 @@ export class RegisterDto {
   avatar?: string;
 
   @IsOptional()
-  @IsEnum(UserRole)
+  @IsIn(USER_ROLES)
   role?: UserRole;
 }
 
@@ -60,6 +63,8 @@ export class AuthResponseDto {
     email: string;
     discordId: string;
     avatar?: string | null;
+    role?: UserRole;
+    createdAt?: Date;
   };
   token?: string;
   message: string;

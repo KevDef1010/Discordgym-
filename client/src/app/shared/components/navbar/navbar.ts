@@ -12,6 +12,7 @@ import { AuthService } from '../../services/auth.service';
 })
 export class NavbarComponent {
   isMobileMenuOpen = false;
+  isUserMenuOpen = false;
 
   constructor(
     private router: Router,
@@ -30,6 +31,10 @@ export class NavbarComponent {
     this.isMobileMenuOpen = !this.isMobileMenuOpen;
   }
 
+  toggleUserMenu(): void {
+    this.isUserMenuOpen = !this.isUserMenuOpen;
+  }
+
   navigateToLogin(): void {
     this.router.navigate(['/login']);
   }
@@ -39,10 +44,17 @@ export class NavbarComponent {
   }
 
   navigateToProfile(): void {
+    this.isUserMenuOpen = false;
     this.router.navigate(['/profile']);
   }
 
+  navigateToSettings(): void {
+    this.isUserMenuOpen = false;
+    this.router.navigate(['/settings']);
+  }
+
   logout(): void {
+    this.isUserMenuOpen = false;
     this.authService.logout();
     this.router.navigate(['/']);
   }

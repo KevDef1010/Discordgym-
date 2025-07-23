@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {
   Injectable,
   ConflictException,
@@ -13,7 +14,9 @@ export class AuthService {
 
   private generateDiscordId(): string {
     // Generate a random 18-digit Discord-like ID
-    return Math.floor(Math.random() * 9000000000000000000 + 1000000000000000000).toString();
+    return Math.floor(
+      Math.random() * 9000000000000000000 + 1000000000000000000,
+    ).toString();
   }
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
@@ -54,7 +57,6 @@ export class AuthService {
         username: registerDto.username,
         email: registerDto.email,
         password: hashedPassword,
-        role: registerDto.role || 'MEMBER', // Default role is MEMBER
         avatar:
           registerDto.avatar ||
           `https://example.com/avatar/${registerDto.username}.png`,
@@ -70,7 +72,8 @@ export class AuthService {
     });
 
     return {
-      user,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      user: user as any,
       message: 'Registration successful! Welcome to DiscordGym! 🏋️‍♂️',
     };
   }
@@ -99,10 +102,12 @@ export class AuthService {
     }
 
     // Remove password from response
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userWithoutPassword } = user;
 
     return {
-      user: userWithoutPassword,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      user: userWithoutPassword as any,
       message: 'Login successful! Welcome back! 💪',
     };
   }

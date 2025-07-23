@@ -71,4 +71,7 @@ export class Dashboard implements OnInit {
       day: 'numeric' 
     });
   }
+   navigateToSettings(): void {
+    this.router.navigate(['/settings']);
+  }
 }
