@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,178 +7,159 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User Model - Discord users who use DiscordGym
 model User {
-  id          String   @id @default(cuid())
-  discordId   String   @unique // Discord User ID
-  username    String   @unique
-  email       String   @unique
-  password    String?  // Hashed password for registration
-  avatar      String?  // Discord avatar URL
-  role        UserRole @default(MEMBER) // User role in the system
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String          @id @default(cuid())
+  discordId  String          @unique
+  username   String          @unique
+  email      String          @unique
+  password   String?
+  avatar     String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  isActive   Boolean         @default(true)
+  role       UserRole        @default(MEMBER)
+  displayId  String?         @unique
+  progress   Progress[]
+  servers    ServerMember[]
+  challenges UserChallenge[]
+  workouts   Workout[]
 
-  // Relations
-  workouts    Workout[]
-  servers     ServerMember[]
-  challenges  UserChallenge[]
-  progress    Progress[]
-  
   @@map("users")
 }
 
-// User Role Enum - Different permission levels
-enum UserRole {
-  SUPER_ADMIN    // Full system access, can manage everything
-  ADMIN          // Can manage users, servers, and content
-  MODERATOR      // Can moderate content and help users
-  TRAINER        // Can create workouts and challenges
-  PREMIUM_USER   // Premium features access
-  MEMBER         // Standard user
-  GUEST          // Limited access, unverified user
-}
-
-// Discord Server Model
 model Server {
-  id          String   @id @default(cuid())
-  discordId   String   @unique // Discord Server ID
-  name        String
-  icon        String?  // Discord server icon URL
-  ownerId     String   // Discord User ID of server owner
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String         @id @default(cuid())
+  discordId  String         @unique
+  name       String
+  icon       String?
+  ownerId    String
+  isActive   Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  challenges Challenge[]
+  members    ServerMember[]
 
-  // Relations
-  members     ServerMember[]
-  challenges  Challenge[]
-  
   @@map("servers")
 }
 
-// Server Membership
 model ServerMember {
-  id        String   @id @default(cuid())
-  userId    String
-  serverId  String
-  role      MemberRole @default(MEMBER)
-  joinedAt  DateTime @default(now())
-
-  // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  id       String     @id @default(cuid())
+  userId   String
+  serverId String
+  role     MemberRole @default(MEMBER)
+  joinedAt DateTime   @default(now())
+  server   Server     @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, serverId])
+  @@index([serverId], map: "server_members_serverId_fkey")
   @@map("server_members")
 }
 
-// Workout Model
 model Workout {
-  id          String      @id @default(cuid())
-  userId      String
-  name        String
-  description String?
-  type        WorkoutType
-  duration    Int?        // Duration in minutes
+  id             String      @id @default(cuid())
+  userId         String
+  name           String
+  description    String?
+  type           WorkoutType
+  duration       Int?
   caloriesBurned Int?
-  date        DateTime    @default(now())
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  date           DateTime    @default(now())
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  exercises      Exercise[]
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relations
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exercises   Exercise[]
-  
+  @@index([userId], map: "workouts_userId_fkey")
   @@map("workouts")
 }
 
-// Exercise Model
 model Exercise {
-  id          String   @id @default(cuid())
-  workoutId   String
-  name        String
-  sets        Int?
-  reps        Int?
-  weight      Float?   // Weight in kg
-  distance    Float?   // Distance in km
-  duration    Int?     // Duration in seconds
-  notes       String?
-  order       Int      @default(0)
+  id        String  @id @default(cuid())
+  workoutId String
+  name      String
+  sets      Int?
+  reps      Int?
+  weight    Float?
+  distance  Float?
+  duration  Int?
+  notes     String?
+  order     Int     @default(0)
+  workout   Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
 
-  // Relations
-  workout     Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
-  
+  @@index([workoutId], map: "exercises_workoutId_fkey")
   @@map("exercises")
 }
 
-// Challenge Model
 model Challenge {
-  id          String      @id @default(cuid())
-  serverId    String
-  name        String
-  description String
-  type        ChallengeType
-  target      Float       // Target value (steps, weight, distance, etc.)
-  unit        String      // Unit of measurement
-  startDate   DateTime
-  endDate     DateTime
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  // Relations
-  server      Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  id           String          @id @default(cuid())
+  serverId     String
+  name         String
+  description  String
+  type         ChallengeType
+  target       Float
+  unit         String
+  startDate    DateTime
+  endDate      DateTime
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  server       Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
   participants UserChallenge[]
-  
+
+  @@index([serverId], map: "challenges_serverId_fkey")
   @@map("challenges")
 }
 
-// User Challenge Participation
 model UserChallenge {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   challengeId String
-  progress    Float    @default(0) // Current progress
-  completed   Boolean  @default(false)
-  joinedAt    DateTime @default(now())
+  progress    Float     @default(0)
+  completed   Boolean   @default(false)
+  joinedAt    DateTime  @default(now())
   completedAt DateTime?
-
-  // Relations
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, challengeId])
+  @@index([challengeId], map: "user_challenges_challengeId_fkey")
   @@map("user_challenges")
 }
 
-// Progress Tracking
 model Progress {
   id        String       @id @default(cuid())
   userId    String
   type      ProgressType
-  value     Float        // Weight, body fat %, muscle mass, etc.
-  unit      String       // kg, %, cm, etc.
+  value     Float
+  unit      String
   date      DateTime     @default(now())
   notes     String?
   createdAt DateTime     @default(now())
-
-  // Relations
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  @@index([userId], map: "progress_userId_fkey")
   @@map("progress")
 }
 
-// Enums
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+  TRAINER
+  PREMIUM_USER
+  MEMBER
+  GUEST
+}
+
 enum MemberRole {
-  OWNER           // Server owner, full control
-  ADMIN           // Server admin, can manage server
-  MODERATOR       // Can moderate chat and users
-  TRAINER         // Can create and manage workouts
-  VIP             // Premium member with extra perks
-  MEMBER          // Regular server member
-  GUEST           // Limited access member
+  OWNER
+  ADMIN
+  MODERATOR
+  TRAINER
+  VIP
+  MEMBER
+  GUEST
 }
 
 enum WorkoutType {

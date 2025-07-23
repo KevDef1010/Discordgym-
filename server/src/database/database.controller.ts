@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('database')
@@ -207,37 +207,8 @@ export class DatabaseController {
     });
   }
 
-  @Post('quick-user')
-  async createQuickUser() {
-    const randomId = Math.floor(Math.random() * 1000000);
-    const usernames = [
-      'PowerLifter',
-      'CardioKing',
-      'YogaMaster',
-      'RunnerPro',
-      'StrengthBeast',
-      'FlexibilityGuru',
-    ];
-    const username =
-      usernames[Math.floor(Math.random() * usernames.length)] + randomId;
-
-    const user = await this.prisma.user.create({
-      data: {
-        discordId: `${randomId}${randomId}${randomId}`,
-        username,
-        email: `${username.toLowerCase()}@discordgym.com`,
-        avatar: `https://example.com/avatar${randomId}.png`,
-      },
-    });
-
-    return {
-      message: 'Quick user created! 🏃‍♂️',
-      user,
-      apiUrls: {
-        getUser: `http://localhost:3000/users/${user.id}`,
-        getUserByDiscord: `http://localhost:3000/users/discord/${user.discordId}`,
-        allUsers: 'http://localhost:3000/users',
-      },
-    };
+    @Post('promote-admin')
+  async promoteToAdmin(@Body() { email }: { email: string }) {
+    return await this.prisma.$executeRaw`UPDATE users SET role = 'SUPER_ADMIN' WHERE email = ${email}`;
   }
 }

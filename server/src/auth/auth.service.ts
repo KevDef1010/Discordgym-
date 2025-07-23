@@ -19,9 +19,20 @@ export class AuthService {
     ).toString();
   }
 
+  private generateDisplayId(username: string): string {
+    // Generate a user-friendly display ID (GitHub-style)
+    const suffixes = ['gym', 'fit', 'strong', 'power', 'beast', 'iron', 'flex', 'gains'];
+    const randomSuffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+    const randomNumber = Math.floor(Math.random() * 999).toString().padStart(3, '0');
+    return `@${username.toLowerCase()}-${randomSuffix}${randomNumber}`;
+  }
+
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
     // Generate Discord ID if not provided
     const discordId = registerDto.discordId || this.generateDiscordId();
+    
+    // Generate user-friendly display ID
+    const displayId = this.generateDisplayId(registerDto.username);
 
     // Check if user already exists
     const existingUser = await this.prisma.user.findFirst({
@@ -30,6 +41,7 @@ export class AuthService {
           { email: registerDto.email },
           { discordId: discordId },
           { username: registerDto.username },
+          { displayId: displayId },
         ],
       },
     });
@@ -54,6 +66,7 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: {
         discordId: discordId,
+        displayId: displayId,
         username: registerDto.username,
         email: registerDto.email,
         password: hashedPassword,
@@ -66,6 +79,7 @@ export class AuthService {
         username: true,
         email: true,
         discordId: true,
+        displayId: true,
         avatar: true,
         createdAt: true,
       },

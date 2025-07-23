@@ -5,7 +5,9 @@ import { Register } from './pages/register/register';
 import { Dashboard } from './pages/dashboard/dashboard';
 import { ProfileComponent } from './pages/profile/profile';
 import { SettingsComponent } from './pages/settings/settings';
+import { AdminComponent } from './pages/admin/admin';
 import { AuthGuard, GuestGuard } from './shared/guards/auth.guard';
+import { AdminGuard } from './shared/guards/admin.guard';
 
 export const routes: Routes = [
   { 
@@ -48,6 +50,12 @@ export const routes: Routes = [
     component: SettingsComponent,
     title: 'DiscordGym - Einstellungen',
     canActivate: [AuthGuard]
+  },
+  {
+    path: 'admin',
+    component: AdminComponent,
+    title: 'DiscordGym - Admin Panel',
+    canActivate: [AdminGuard]
   },
   {
     path: '**',

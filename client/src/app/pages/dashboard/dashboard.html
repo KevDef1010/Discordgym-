@@ -102,6 +102,26 @@
       </div>
     </div>
 
+    <!-- Admin Panel Button (nur für Admins) -->
+    <div *ngIf="isAdmin()" class="mb-8">
+      <div class="bg-gradient-to-r from-red-500 to-orange-500 rounded-lg shadow-lg p-6 text-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold mb-2">🛡️ Admin Panel</h2>
+            <p class="text-red-100">
+              Nutzer verwalten, Rollen zuweisen und Systemstatistiken einsehen
+            </p>
+          </div>
+          <button
+            (click)="navigateToAdmin()"
+            class="bg-white text-red-600 hover:text-red-800 font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+          >
+            Admin Panel öffnen →
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Content Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <!-- Recent Workouts -->

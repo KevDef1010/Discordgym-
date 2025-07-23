@@ -71,7 +71,16 @@ export class Dashboard implements OnInit {
       day: 'numeric' 
     });
   }
-   navigateToSettings(): void {
+
+  navigateToSettings(): void {
     this.router.navigate(['/settings']);
+  }
+
+  navigateToAdmin(): void {
+    this.router.navigate(['/admin']);
+  }
+
+  isAdmin(): boolean {
+    return this.currentUser?.role === 'ADMIN' || this.currentUser?.role === 'SUPER_ADMIN';
   }
 }

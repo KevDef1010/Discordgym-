@@ -53,6 +53,16 @@ export class NavbarComponent {
     this.router.navigate(['/settings']);
   }
 
+  navigateToAdmin(): void {
+    this.isUserMenuOpen = false;
+    this.router.navigate(['/admin']);
+  }
+
+  isAdmin(): boolean {
+    const user = this.currentUser;
+    return user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  }
+
   logout(): void {
     this.isUserMenuOpen = false;
     this.authService.logout();
