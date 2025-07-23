@@ -23,6 +23,11 @@ model User {
   servers    ServerMember[]
   challenges UserChallenge[]
   workouts   Workout[]
+  
+  // Freundschaften - ausgehende Anfragen
+  sentFriendships     Friendship[] @relation("FriendshipSender")
+  // Freundschaften - eingehende Anfragen  
+  receivedFriendships Friendship[] @relation("FriendshipReceiver")
 
   @@map("users")
 }
@@ -40,6 +45,21 @@ model Server {
   members    ServerMember[]
 
   @@map("servers")
+}
+
+model Friendship {
+  id         String           @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     FriendshipStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  
+  sender   User @relation("FriendshipSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@unique([senderId, receiverId])
+  @@map("friendships")
 }
 
 model ServerMember {
@@ -140,6 +160,13 @@ model Progress {
 
   @@index([userId], map: "progress_userId_fkey")
   @@map("progress")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
 }
 
 enum UserRole {

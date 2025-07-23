@@ -76,6 +76,10 @@ export class Dashboard implements OnInit {
     this.router.navigate(['/settings']);
   }
 
+  navigateToFriends(): void {
+    this.router.navigate(['/friends']);
+  }
+
   navigateToAdmin(): void {
     this.router.navigate(['/admin']);
   }

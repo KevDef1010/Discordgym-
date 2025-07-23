@@ -1,0 +1,275 @@
+<!-- Friends Page -->
+<div class="min-h-screen bg-gray-900 text-white p-6">
+  <div class="max-w-6xl mx-auto">
+    
+    <!-- Header mit Statistiken -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold mb-6 flex items-center">
+        <span class="mr-3">👥</span>
+        Freunde & Community
+      </h1>
+      
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-gray-800 rounded-lg p-4 border-l-4 border-green-500">
+          <div class="text-2xl font-bold text-green-400">{{stats.friendsCount}}</div>
+          <div class="text-sm text-gray-400">Freunde</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4 border-l-4 border-yellow-500">
+          <div class="text-2xl font-bold text-yellow-400">{{stats.pendingRequestsCount}}</div>
+          <div class="text-sm text-gray-400">Eingehende Anfragen</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4 border-l-4 border-blue-500">
+          <div class="text-2xl font-bold text-blue-400">{{stats.sentRequestsCount}}</div>
+          <div class="text-sm text-gray-400">Gesendete Anfragen</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="bg-gray-800 rounded-lg mb-6">
+      <div class="flex border-b border-gray-700">
+        <button 
+          (click)="switchTab('friends')" 
+          [class]="'px-6 py-4 font-medium transition-colors ' + (activeTab === 'friends' ? 'bg-blue-600 text-white border-b-2 border-blue-400' : 'text-gray-400 hover:text-white')"
+        >
+          <span class="mr-2">👥</span>
+          Meine Freunde ({{stats.friendsCount}})
+        </button>
+        <button 
+          (click)="switchTab('search')" 
+          [class]="'px-6 py-4 font-medium transition-colors ' + (activeTab === 'search' ? 'bg-blue-600 text-white border-b-2 border-blue-400' : 'text-gray-400 hover:text-white')"
+        >
+          <span class="mr-2">🔍</span>
+          Freunde finden
+        </button>
+        <button 
+          (click)="switchTab('requests')" 
+          [class]="'px-6 py-4 font-medium transition-colors relative ' + (activeTab === 'requests' ? 'bg-blue-600 text-white border-b-2 border-blue-400' : 'text-gray-400 hover:text-white')"
+        >
+          <span class="mr-2">📨</span>
+          Anfragen
+          <span *ngIf="stats.pendingRequestsCount > 0" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            {{stats.pendingRequestsCount}}
+          </span>
+        </button>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="p-6">
+        
+        <!-- Freunde Tab -->
+        <div *ngIf="activeTab === 'friends'">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold">Deine Freunde</h2>
+            <button (click)="loadFriends()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm">
+              🔄 Aktualisieren
+            </button>
+          </div>
+
+          <!-- Loading -->
+          <div *ngIf="friendsLoading" class="text-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+            <p class="mt-2 text-gray-400">Lade Freunde...</p>
+          </div>
+
+          <!-- Freunde Liste -->
+          <div *ngIf="!friendsLoading && friends.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div *ngFor="let friendship of friends" class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors">
+              <div class="flex items-center space-x-3">
+                <img [src]="getAvatarUrl(friendship.friend)" [alt]="friendship.friend.username" class="w-12 h-12 rounded-full">
+                <div class="flex-1">
+                  <h3 class="font-semibold">{{friendship.friend.username}}</h3>
+                  <p class="text-sm text-gray-400">{{getDisplayName(friendship.friend)}}</p>
+                  <p class="text-xs text-gray-500">Seit {{friendship.createdAt | date:'shortDate'}}</p>
+                </div>
+                <div class="flex space-x-2">
+                  <button 
+                    (click)="removeFriend(friendship.friend.id)"
+                    [disabled]="isButtonDisabled('removeFriend', friendship.friend.id)"
+                    [class]="'px-3 py-1 rounded text-xs transition-colors ' + (isRemovingFriend(friendship.friend.id) ? 'bg-gray-600 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700')"
+                  >
+                    <span *ngIf="!isRemovingFriend(friendship.friend.id)">❌ Entfernen</span>
+                    <span *ngIf="isRemovingFriend(friendship.friend.id)" class="flex items-center">
+                      <span class="animate-spin rounded-full h-3 w-3 border-b border-white mr-1"></span>
+                      Entfernen...
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Keine Freunde -->
+          <div *ngIf="!friendsLoading && friends.length === 0" class="text-center py-8">
+            <p class="text-gray-400 mb-4">Du hast noch keine Freunde.</p>
+            <button (click)="switchTab('search')" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg">
+              🔍 Freunde finden
+            </button>
+          </div>
+        </div>
+
+        <!-- Suche Tab -->
+        <div *ngIf="activeTab === 'search'">
+          <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-4">Neue Freunde finden</h2>
+            
+            <!-- Suchfeld -->
+            <div class="relative">
+              <input 
+                type="text" 
+                [(ngModel)]="searchQuery"
+                (input)="onSearchChange(searchQuery)"
+                placeholder="Nach Username, Display-ID oder E-Mail suchen..."
+                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 pl-10 focus:outline-none focus:border-blue-500"
+              >
+              <span class="absolute left-3 top-3 text-gray-400">🔍</span>
+            </div>
+          </div>
+
+          <!-- Search Loading -->
+          <div *ngIf="searchLoading" class="text-center py-4">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>
+            <p class="mt-2 text-gray-400 text-sm">Suche...</p>
+          </div>
+
+          <!-- Suchergebnisse -->
+          <div *ngIf="!searchLoading && searchResults.length > 0">
+            <h3 class="text-lg font-medium mb-4">Suchergebnisse ({{searchResults.length}})</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div *ngFor="let user of searchResults" class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors">
+                <div class="flex items-center space-x-3">
+                  <img [src]="getAvatarUrl(user)" [alt]="user.username" class="w-12 h-12 rounded-full">
+                  <div class="flex-1">
+                    <h3 class="font-semibold">{{user.username}}</h3>
+                    <p class="text-sm text-gray-400">{{getDisplayName(user)}}</p>
+                    <div class="flex items-center mt-1">
+                      <span [class]="'w-2 h-2 rounded-full mr-2 ' + (user.isActive ? 'bg-green-400' : 'bg-gray-400')"></span>
+                      <span class="text-xs text-gray-500">{{user.isActive ? 'Online' : 'Offline'}}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <button 
+                      *ngIf="canSendRequest(user.friendshipStatus || 'NONE')"
+                      (click)="sendFriendRequest(user.id)"
+                      [disabled]="isButtonDisabled('sendRequest', user.id, user.friendshipStatus)"
+                      [class]="'px-3 py-1 rounded text-xs transition-colors ' + (isSendingRequest(user.id) ? 'bg-gray-600 cursor-not-allowed' : getFriendshipStatusClass(user.friendshipStatus || 'NONE'))"
+                    >
+                      <span *ngIf="!isSendingRequest(user.id)">{{getFriendshipStatusText(user.friendshipStatus || 'NONE')}}</span>
+                      <span *ngIf="isSendingRequest(user.id)" class="flex items-center">
+                        <span class="animate-spin rounded-full h-3 w-3 border-b border-white mr-1"></span>
+                        Sende...
+                      </span>
+                    </button>
+                    <span 
+                      *ngIf="!canSendRequest(user.friendshipStatus || 'NONE')"
+                      [class]="'px-3 py-1 rounded text-xs ' + getFriendshipStatusClass(user.friendshipStatus || 'NONE')"
+                    >
+                      {{getFriendshipStatusText(user.friendshipStatus || 'NONE')}}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Keine Ergebnisse -->
+          <div *ngIf="!searchLoading && searchQuery.length > 0 && searchResults.length === 0" class="text-center py-8">
+            <p class="text-gray-400">Keine User gefunden für "{{searchQuery}}"</p>
+          </div>
+
+          <!-- Suche Hinweis -->
+          <div *ngIf="searchQuery.length === 0" class="text-center py-8">
+            <p class="text-gray-400">Gib einen Suchbegriff ein, um neue Freunde zu finden.</p>
+          </div>
+        </div>
+
+        <!-- Anfragen Tab -->
+        <div *ngIf="activeTab === 'requests'">
+          <!-- Loading -->
+          <div *ngIf="requestsLoading" class="text-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+            <p class="mt-2 text-gray-400">Lade Anfragen...</p>
+          </div>
+
+          <div *ngIf="!requestsLoading">
+            <!-- Eingehende Anfragen -->
+            <div class="mb-8">
+              <h3 class="text-lg font-semibold mb-4">📥 Eingehende Anfragen ({{pendingRequests.length}})</h3>
+              
+              <div *ngIf="pendingRequests.length > 0" class="space-y-4">
+                <div *ngFor="let request of pendingRequests" class="bg-gray-700 rounded-lg p-4">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                      <img [src]="getAvatarUrl(request.sender)" [alt]="request.sender?.username" class="w-12 h-12 rounded-full">
+                      <div>
+                        <h4 class="font-semibold">{{request.sender?.username}}</h4>
+                        <p class="text-sm text-gray-400">{{getDisplayName(request.sender)}}</p>
+                        <p class="text-xs text-gray-500">{{request.createdAt | date:'short'}}</p>
+                      </div>
+                    </div>
+                    <div class="flex space-x-2">
+                      <button 
+                        (click)="respondToRequest(request.id, 'ACCEPTED')"
+                        [disabled]="isButtonDisabled('respondRequest', request.id)"
+                        [class]="'px-4 py-2 rounded text-sm transition-colors ' + (isRespondingToRequest(request.id) ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700')"
+                      >
+                        <span *ngIf="!isRespondingToRequest(request.id)">✅ Annehmen</span>
+                        <span *ngIf="isRespondingToRequest(request.id)" class="flex items-center">
+                          <span class="animate-spin rounded-full h-3 w-3 border-b border-white mr-1"></span>
+                          Annehmen...
+                        </span>
+                      </button>
+                      <button 
+                        (click)="respondToRequest(request.id, 'DECLINED')"
+                        [disabled]="isButtonDisabled('respondRequest', request.id)"
+                        [class]="'px-4 py-2 rounded text-sm transition-colors ' + (isRespondingToRequest(request.id) ? 'bg-gray-600 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700')"
+                      >
+                        <span *ngIf="!isRespondingToRequest(request.id)">❌ Ablehnen</span>
+                        <span *ngIf="isRespondingToRequest(request.id)" class="flex items-center">
+                          <span class="animate-spin rounded-full h-3 w-3 border-b border-white mr-1"></span>
+                          Ablehnen...
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div *ngIf="pendingRequests.length === 0" class="text-center py-6 text-gray-400">
+                Keine eingehenden Anfragen
+              </div>
+            </div>
+
+            <!-- Ausgehende Anfragen -->
+            <div>
+              <h3 class="text-lg font-semibold mb-4">📤 Gesendete Anfragen ({{sentRequests.length}})</h3>
+              
+              <div *ngIf="sentRequests.length > 0" class="space-y-4">
+                <div *ngFor="let request of sentRequests" class="bg-gray-700 rounded-lg p-4">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                      <img [src]="getAvatarUrl(request.receiver)" [alt]="request.receiver?.username" class="w-12 h-12 rounded-full">
+                      <div>
+                        <h4 class="font-semibold">{{request.receiver?.username}}</h4>
+                        <p class="text-sm text-gray-400">{{getDisplayName(request.receiver)}}</p>
+                        <p class="text-xs text-gray-500">Gesendet: {{request.createdAt | date:'short'}}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <span class="bg-yellow-600 px-3 py-1 rounded text-sm">⏳ Ausstehend</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div *ngIf="sentRequests.length === 0" class="text-center py-6 text-gray-400">
+                Keine gesendeten Anfragen
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

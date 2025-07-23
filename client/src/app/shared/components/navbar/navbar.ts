@@ -53,6 +53,11 @@ export class NavbarComponent {
     this.router.navigate(['/settings']);
   }
 
+  navigateToFriends(): void {
+    this.isUserMenuOpen = false;
+    this.router.navigate(['/friends']);
+  }
+
   navigateToAdmin(): void {
     this.isUserMenuOpen = false;
     this.router.navigate(['/admin']);
