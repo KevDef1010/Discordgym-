@@ -69,6 +69,8 @@ curl http://localhost:3000/database/stats
 
 ### Backend (Server)
 - **Framework**: NestJS 11.0.1
+- **Database**: MariaDB (Docker Container)
+- **ORM**: Prisma 
 - **Language**: TypeScript
 - **Runtime**: Node.js
 - **Testing**: Jest
