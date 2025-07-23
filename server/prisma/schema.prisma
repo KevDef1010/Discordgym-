@@ -18,6 +18,8 @@ model User {
   email       String   @unique
   password    String?  // Hashed password for registration
   avatar      String?  // Discord avatar URL
+  role        UserRole @default(MEMBER) // User role in the system
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -28,6 +30,17 @@ model User {
   progress    Progress[]
   
   @@map("users")
+}
+
+// User Role Enum - Different permission levels
+enum UserRole {
+  SUPER_ADMIN    // Full system access, can manage everything
+  ADMIN          // Can manage users, servers, and content
+  MODERATOR      // Can moderate content and help users
+  TRAINER        // Can create workouts and challenges
+  PREMIUM_USER   // Premium features access
+  MEMBER         // Standard user
+  GUEST          // Limited access, unverified user
 }
 
 // Discord Server Model
@@ -162,10 +175,13 @@ model Progress {
 
 // Enums
 enum MemberRole {
-  OWNER
-  ADMIN
-  MODERATOR
-  MEMBER
+  OWNER           // Server owner, full control
+  ADMIN           // Server admin, can manage server
+  MODERATOR       // Can moderate chat and users
+  TRAINER         // Can create and manage workouts
+  VIP             // Premium member with extra perks
+  MEMBER          // Regular server member
+  GUEST           // Limited access member
 }
 
 enum WorkoutType {

@@ -4,7 +4,18 @@ import {
   IsNotEmpty,
   MinLength,
   IsOptional,
+  IsEnum,
 } from 'class-validator';
+
+export enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
+  MODERATOR = 'MODERATOR',
+  TRAINER = 'TRAINER',
+  PREMIUM_USER = 'PREMIUM_USER',
+  MEMBER = 'MEMBER',
+  GUEST = 'GUEST',
+}
 
 export class RegisterDto {
   @IsOptional()
@@ -27,6 +38,10 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   avatar?: string;
+
+  @IsOptional()
+  @IsEnum(UserRole)
+  role?: UserRole;
 }
 
 export class LoginDto {

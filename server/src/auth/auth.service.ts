@@ -54,6 +54,7 @@ export class AuthService {
         username: registerDto.username,
         email: registerDto.email,
         password: hashedPassword,
+        role: registerDto.role || 'MEMBER', // Default role is MEMBER
         avatar:
           registerDto.avatar ||
           `https://example.com/avatar/${registerDto.username}.png`,
