@@ -2,6 +2,77 @@
 <div class="min-h-screen bg-gray-900 text-white p-6">
   <div class="max-w-6xl mx-auto">
     
+    <!-- Real-time Notifications -->
+    <div class="fixed top-4 right-4 z-50 space-y-2" *ngIf="notifications.length > 0">
+      <div 
+        *ngFor="let notification of notifications; trackBy: trackNotification"
+        class="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg max-w-sm animate-slide-in"
+        [ngClass]="{
+          'border-green-500': notification.type === 'FRIEND_REQUEST_RESPONSE' && notification.status === 'ACCEPTED',
+          'border-blue-500': notification.type === 'FRIEND_REQUEST',
+          'border-yellow-500': notification.type === 'FRIEND_ONLINE',
+          'border-gray-500': notification.type === 'FRIEND_OFFLINE'
+        }"
+      >
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <!-- Friend Request Notification -->
+            <div *ngIf="notification.type === 'FRIEND_REQUEST'" class="flex items-center mb-2">
+              <span class="text-blue-400 mr-2">📩</span>
+              <span class="font-medium">Neue Freundschaftsanfrage</span>
+            </div>
+            
+            <!-- Friend Request Response -->
+            <div *ngIf="notification.type === 'FRIEND_REQUEST_RESPONSE'" class="flex items-center mb-2">
+              <span class="text-green-400 mr-2" *ngIf="notification.status === 'ACCEPTED'">✅</span>
+              <span class="text-red-400 mr-2" *ngIf="notification.status === 'DECLINED'">❌</span>
+              <span class="font-medium">Freundschaftsanfrage {{notification.status === 'ACCEPTED' ? 'akzeptiert' : 'abgelehnt'}}</span>
+            </div>
+            
+            <!-- Friend Online/Offline -->
+            <div *ngIf="notification.type === 'FRIEND_ONLINE'" class="flex items-center mb-2">
+              <span class="text-green-400 mr-2">🟢</span>
+              <span class="font-medium">Freund ist online</span>
+            </div>
+            
+            <div *ngIf="notification.type === 'FRIEND_OFFLINE'" class="flex items-center mb-2">
+              <span class="text-gray-400 mr-2">⚫</span>
+              <span class="font-medium">Freund ist offline</span>
+            </div>
+            
+            <!-- User Info -->
+            <div class="text-sm text-gray-300" *ngIf="notification.sender">
+              von <span class="text-white font-medium">{{notification.sender.username}}</span>
+            </div>
+            <div class="text-sm text-gray-300" *ngIf="notification.user">
+              <span class="text-white font-medium">{{notification.user.username}}</span>
+            </div>
+            
+            <!-- Message -->
+            <div class="text-sm text-gray-400 mt-1" *ngIf="notification.message">
+              {{notification.message}}
+            </div>
+          </div>
+          
+          <!-- Close Button -->
+          <button 
+            (click)="removeNotification(notification)"
+            class="text-gray-400 hover:text-white transition-colors ml-3"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="fixed top-4 left-4 z-40" *ngIf="socketService.connected$ | async">
+      <div class="bg-green-900 border border-green-500 rounded-lg px-3 py-1 text-sm">
+        <span class="text-green-400 mr-1">🔗</span>
+        Live verbunden
+      </div>
+    </div>
+    
     <!-- Header mit Statistiken -->
     <div class="mb-8">
       <h1 class="text-3xl font-bold mb-6 flex items-center">

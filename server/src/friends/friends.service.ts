@@ -3,13 +3,18 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable prettier/prettier */
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FriendshipResponse, UserSearchResponse } from './dto/friends.dto';
+import { FriendsGateway } from './friends.gateway';
 
 @Injectable()
 export class FriendsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => FriendsGateway))
+    private friendsGateway: FriendsGateway
+  ) {}
 
   // Freundschaftsanfrage senden
   async sendFriendRequest(senderId: string, receiverId: string) {
@@ -70,6 +75,13 @@ export class FriendsService {
       }
     });
 
+    // Real-time notification senden
+    this.friendsGateway.sendFriendRequest(receiverId, {
+      id: friendship.id,
+      sender: friendship.sender,
+      createdAt: friendship.createdAt
+    });
+
     return {
       message: 'Friend request sent successfully',
       friendship
@@ -104,6 +116,13 @@ export class FriendsService {
           }
         }
       }
+    });
+
+    // Real-time notification an Sender senden
+    this.friendsGateway.sendFriendRequestResponse(friendship.senderId, {
+      status,
+      friendship: updatedFriendship,
+      message: `Friend request ${status.toLowerCase()}`
     });
 
     return {

@@ -2,9 +2,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, switchMap, of, Subscription } from 'rxjs';
 import { FriendsService, Friend, UserSearchResult, FriendRequest, FriendStats } from '../../shared/services/friends.service';
 import { AuthService } from '../../shared/services/auth.service';
+import { SocketService, FriendRequestNotification } from '../../shared/services/socket.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -17,6 +18,12 @@ import { Router } from '@angular/router';
 export class FriendsComponent implements OnInit, OnDestroy {
   // Aktueller User (aus Authentication Service)
   currentUserId: string | null = null;
+
+  // Socket.IO Subscriptions
+  private socketSubscriptions: Subscription[] = [];
+
+  // Real-time Notifications
+  notifications: FriendRequestNotification[] = [];
 
   // Tabs
   activeTab: 'friends' | 'search' | 'requests' = 'friends';
@@ -51,6 +58,7 @@ export class FriendsComponent implements OnInit, OnDestroy {
   constructor(
     private friendsService: FriendsService, 
     private authService: AuthService,
+    public socketService: SocketService, // Public für Template Zugriff
     private router: Router
   ) {
     // Search mit Debouncing einrichten
@@ -87,6 +95,9 @@ export class FriendsComponent implements OnInit, OnDestroy {
     
     this.currentUserId = currentUser.id;
     
+    // Socket.IO Verbindung initialisieren
+    this.initializeSocket();
+    
     // Daten laden
     this.loadFriends();
     this.loadStats();
@@ -94,6 +105,76 @@ export class FriendsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.searchSubject.complete();
+    
+    // Socket.IO Subscriptions aufräumen
+    this.socketSubscriptions.forEach(sub => sub.unsubscribe());
+    this.socketService.disconnect();
+  }
+
+  // Socket.IO initialisieren
+  private initializeSocket() {
+    if (!this.currentUserId) return;
+
+    // Socket.IO Verbindung herstellen
+    this.socketService.connect(this.currentUserId);
+
+    // Real-time Benachrichtigungen abonnieren
+    const notificationSub = this.socketService.notifications$.subscribe(notification => {
+      if (notification) {
+        this.handleRealTimeNotification(notification);
+      }
+    });
+
+    this.socketSubscriptions.push(notificationSub);
+  }
+
+  // Real-time Benachrichtigungen verarbeiten
+  private handleRealTimeNotification(notification: FriendRequestNotification) {
+    console.log('📱 Real-time notification:', notification);
+    
+    // Notification zur Liste hinzufügen
+    this.notifications.unshift(notification);
+    
+    // Nach 5 Sekunden automatisch entfernen
+    setTimeout(() => {
+      const index = this.notifications.indexOf(notification);
+      if (index > -1) {
+        this.notifications.splice(index, 1);
+      }
+    }, 5000);
+
+    switch (notification.type) {
+      case 'FRIEND_REQUEST':
+        // Neue Freundschaftsanfrage erhalten
+        this.loadRequests(); // Requests neu laden
+        this.loadStats(); // Stats aktualisieren
+        break;
+        
+      case 'FRIEND_REQUEST_RESPONSE':
+        // Antwort auf Friend Request
+        if (notification.status === 'ACCEPTED') {
+          this.loadFriends(); // Freunde neu laden wenn akzeptiert
+        }
+        this.loadRequests(); // Requests neu laden
+        this.loadStats(); // Stats aktualisieren
+        break;
+        
+      case 'FRIEND_ONLINE':
+        // Friend kam online - Optional: Online-Status in UI anzeigen
+        break;
+        
+      case 'FRIEND_OFFLINE':
+        // Friend ging offline - Optional: Offline-Status in UI anzeigen
+        break;
+    }
+  }
+
+  // Notification entfernen
+  removeNotification(notification: FriendRequestNotification) {
+    const index = this.notifications.indexOf(notification);
+    if (index > -1) {
+      this.notifications.splice(index, 1);
+    }
   }
 
   // Tab wechseln
@@ -311,5 +392,10 @@ export class FriendsComponent implements OnInit, OnDestroy {
 
   getAvatarUrl(user: any): string {
     return user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`;
+  }
+
+  // TrackBy Funktion für Notifications
+  trackNotification(index: number, notification: FriendRequestNotification): string {
+    return notification.timestamp;
   }
 }
