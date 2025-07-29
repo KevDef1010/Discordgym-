@@ -17,7 +17,6 @@ export class UserController {
 
   @Post()
   async createUser(@Body() createUserDto: CreateUserDto) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return await this.userService.create(createUserDto);
   }
 
@@ -46,7 +45,6 @@ export class UserController {
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return await this.userService.update(id, updateUserDto);
   }
 

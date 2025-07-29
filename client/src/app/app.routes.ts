@@ -7,6 +7,7 @@ import { ProfileComponent } from './pages/profile/profile';
 import { SettingsComponent } from './pages/settings/settings';
 import { AdminComponent } from './pages/admin/admin';
 import { FriendsComponent } from './pages/friends/friends';
+import { ChatComponent } from './pages/chat/chat';
 import { AuthGuard, GuestGuard } from './shared/guards/auth.guard';
 import { AdminGuard } from './shared/guards/admin.guard';
 
@@ -56,6 +57,12 @@ export const routes: Routes = [
     path: 'friends',
     component: FriendsComponent,
     title: 'DiscordGym - Freunde',
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'chat',
+    component: ChatComponent,
+    title: 'DiscordGym - Chat',
     canActivate: [AuthGuard]
   },
   {

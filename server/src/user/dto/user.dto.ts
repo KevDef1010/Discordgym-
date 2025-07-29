@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { IsString, IsEmail, IsOptional, IsNotEmpty } from 'class-validator';
 
 export class CreateUserDto {

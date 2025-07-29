@@ -72,7 +72,12 @@
               "buildTarget": "client:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "liveReload": true,
+            "hmr": false,
+            "host": "localhost"
+          }
         },
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n"

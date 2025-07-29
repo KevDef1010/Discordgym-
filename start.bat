@@ -22,17 +22,17 @@ cd ..
 echo.
 echo 🚀 Starting servers...
 echo Backend: http://localhost:3000
-echo Frontend: http://localhost:4200
-echo 📱 Open http://localhost:4200 in your browser
+echo Frontend: Automatic port selection (4200+)
+echo 📱 Check terminal output for frontend URL
 echo.
 
 start "🏋️ Backend Server" cmd /k "cd server && npm start"
 timeout /t 3 /nobreak > nul
-start "🌐 Frontend Server" cmd /k "cd client && npm start"
+start "🌐 Frontend Server" cmd /k "cd client && npm run start:4200"
 
 echo ✅ Servers are starting...
 echo ✅ Backend: http://localhost:3000
-echo ✅ Frontend: http://localhost:4200
+echo ✅ Frontend: Auto-selected port (check terminal window)
 echo.
 echo 🛑 Close the terminal windows to stop servers
 echo 📖 See START-GUIDE.md for detailed instructions

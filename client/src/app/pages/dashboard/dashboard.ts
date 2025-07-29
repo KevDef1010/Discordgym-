@@ -80,6 +80,10 @@ export class Dashboard implements OnInit {
     this.router.navigate(['/friends']);
   }
 
+  navigateToChat(): void {
+    this.router.navigate(['/chat']);
+  }
+
   navigateToAdmin(): void {
     this.router.navigate(['/admin']);
   }

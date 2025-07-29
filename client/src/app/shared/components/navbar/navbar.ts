@@ -58,6 +58,11 @@ export class NavbarComponent {
     this.router.navigate(['/friends']);
   }
 
+  navigateToChat(): void {
+    this.isUserMenuOpen = false;
+    this.router.navigate(['/chat']);
+  }
+
   navigateToAdmin(): void {
     this.isUserMenuOpen = false;
     this.router.navigate(['/admin']);

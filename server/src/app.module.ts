@@ -8,6 +8,7 @@ import { WorkoutModule } from './workout/workout.module';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
 import { FriendsModule } from './friends/friends.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { FriendsModule } from './friends/friends.module';
     AuthModule,
     AdminModule,
     FriendsModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

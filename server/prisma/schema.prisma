@@ -28,6 +28,14 @@ model User {
   sentFriendships     Friendship[] @relation("FriendshipSender")
   // Freundschaften - eingehende Anfragen  
   receivedFriendships Friendship[] @relation("FriendshipReceiver")
+  
+  // Chat System Relations
+  ownedChatServers    ChatServer[]       @relation("ChatServerOwner")
+  chatServerMembers   ChatServerMember[] @relation("ChatServerMembers")
+  sentMessages        ChatMessage[]      @relation("SentMessages")
+  receivedMessages    ChatMessage[]      @relation("ReceivedMessages")
+  messageReactions    MessageReaction[]  @relation("MessageReactions")
+  createdInvites      ChatServerInvite[] @relation("CreatedInvites")
 
   @@map("users")
 }
@@ -216,4 +224,117 @@ enum ProgressType {
   MUSCLE_MASS
   MEASUREMENTS
   OTHER
+}
+
+// Chat System Models
+model ChatServer {
+  id          String              @id @default(cuid())
+  name        String
+  description String?
+  avatar      String?
+  ownerId     String
+  isPrivate   Boolean             @default(false)
+  inviteCode  String?             @unique
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  
+  owner       User                @relation("ChatServerOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     ChatServerMember[]
+  channels    ChatChannel[]
+  invites     ChatServerInvite[]
+  
+  @@map("chat_servers")
+}
+
+model ChatServerMember {
+  id           String             @id @default(cuid())
+  userId       String
+  chatServerId String
+  role         ChatServerRole     @default(MEMBER)
+  joinedAt     DateTime           @default(now())
+  
+  user         User               @relation("ChatServerMembers", fields: [userId], references: [id], onDelete: Cascade)
+  chatServer   ChatServer         @relation(fields: [chatServerId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, chatServerId])
+  @@map("chat_server_members")
+}
+
+model ChatChannel {
+  id           String         @id @default(cuid())
+  name         String
+  description  String?
+  chatServerId String
+  isPrivate    Boolean        @default(false)
+  position     Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  
+  chatServer   ChatServer     @relation(fields: [chatServerId], references: [id], onDelete: Cascade)
+  messages     ChatMessage[]
+  
+  @@map("chat_channels")
+}
+
+model ChatMessage {
+  id          String            @id @default(cuid())
+  content     String            @db.Text
+  senderId    String
+  channelId   String?           // For server channels
+  receiverId  String?           // For direct messages
+  messageType ChatMessageType   @default(TEXT)
+  isEdited    Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  sender      User              @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User?             @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  channel     ChatChannel?      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  reactions   MessageReaction[]
+  
+  @@map("chat_messages")
+}
+
+model MessageReaction {
+  id        String      @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime    @default(now())
+  
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User        @relation("MessageReactions", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([messageId, userId, emoji])
+  @@map("message_reactions")
+}
+
+model ChatServerInvite {
+  id           String      @id @default(cuid())
+  code         String      @unique
+  chatServerId String
+  createdById  String
+  expiresAt    DateTime?
+  maxUses      Int?
+  uses         Int         @default(0)
+  createdAt    DateTime    @default(now())
+  
+  chatServer   ChatServer  @relation(fields: [chatServerId], references: [id], onDelete: Cascade)
+  createdBy    User        @relation("CreatedInvites", fields: [createdById], references: [id], onDelete: Cascade)
+  
+  @@map("chat_server_invites")
+}
+
+enum ChatServerRole {
+  OWNER
+  ADMIN
+  MOD
+  MEMBER
+}
+
+enum ChatMessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
 }

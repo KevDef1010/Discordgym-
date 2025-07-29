@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged, switchMap, of, Subscription } from 'rxjs';
 import { FriendsService, Friend, UserSearchResult, FriendRequest, FriendStats } from '../../shared/services/friends.service';
 import { AuthService } from '../../shared/services/auth.service';
-import { SocketService, FriendRequestNotification } from '../../shared/services/socket.service';
+import { SocketService, FriendRequestNotification, OnlineUser, Notification as SocketNotification } from '../../shared/services/socket.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -23,7 +23,13 @@ export class FriendsComponent implements OnInit, OnDestroy {
   private socketSubscriptions: Subscription[] = [];
 
   // Real-time Notifications
-  notifications: FriendRequestNotification[] = [];
+  notifications: SocketNotification[] = [];
+
+  // Enhanced Online Status
+  onlineUsers: OnlineUser[] = [];
+  currentUserStatus: 'ONLINE' | 'AWAY' | 'DO_NOT_DISTURB' = 'ONLINE';
+  showStatusSelector = false;
+  isSocketConnected = false;
 
   // Tabs
   activeTab: 'friends' | 'search' | 'requests' = 'friends';
@@ -54,6 +60,14 @@ export class FriendsComponent implements OnInit, OnDestroy {
     pendingRequestsCount: 0,
     sentRequestsCount: 0
   };
+
+  // Group Invite Modal Properties
+  showGroupInviteModalFlag = false;
+  selectedFriendForInvite: any = null;
+  selectedGroupForInvite: any = null;
+  availableGroups: any[] = [];
+  inviteMessage = '';
+  isInviting = false;
 
   constructor(
     private friendsService: FriendsService, 
@@ -95,8 +109,8 @@ export class FriendsComponent implements OnInit, OnDestroy {
     
     this.currentUserId = currentUser.id;
     
-    // Socket.IO Verbindung initialisieren
-    this.initializeSocket();
+    // Socket.IO Verbindung initialisieren mit User Info
+    this.initializeEnhancedSocket();
     
     // Daten laden
     this.loadFriends();
@@ -108,28 +122,76 @@ export class FriendsComponent implements OnInit, OnDestroy {
     
     // Socket.IO Subscriptions aufräumen
     this.socketSubscriptions.forEach(sub => sub.unsubscribe());
-    this.socketService.disconnect();
+    // Nicht disconnect - Socket kann für andere Components weiterlaufen
+    // this.socketService.disconnect();
   }
 
-  // Socket.IO initialisieren
-  private initializeSocket() {
+  // Enhanced Socket.IO initialisieren
+  private initializeEnhancedSocket() {
     if (!this.currentUserId) return;
 
-    // Socket.IO Verbindung herstellen
-    this.socketService.connect(this.currentUserId);
+    const currentUser = this.authService.getCurrentUser();
+    
+    // Load stored status from localStorage
+    const storedStatus = localStorage.getItem(`userStatus_${this.currentUserId}`) || 'ONLINE';
+    this.currentUserStatus = storedStatus as any;
+    
+    // Enhanced Socket Connection mit User Info
+    if (this.currentUserId) {
+      this.socketService.connect(
+        parseInt(this.currentUserId), 
+        currentUser?.username || 'Unknown User',
+        currentUser?.avatar
+      );
+    }
 
-    // Real-time Benachrichtigungen abonnieren
-    const notificationSub = this.socketService.notifications$.subscribe(notification => {
-      if (notification) {
-        this.handleRealTimeNotification(notification);
+    // Connection Status überwachen
+    const connectionSub = this.socketService.connected$.subscribe(connected => {
+      this.isSocketConnected = connected;
+      if (connected) {
+        console.log('✅ Socket connected - requesting online friends');
+        setTimeout(() => {
+          this.socketService.getOnlineFriends();
+          // Refresh online friends every 30 seconds
+          setInterval(() => {
+            if (this.isSocketConnected) {
+              this.socketService.getOnlineFriends();
+            }
+          }, 30000);
+        }, 1000);
       }
     });
+    this.socketSubscriptions.push(connectionSub);
 
+    // Current User Status überwachen
+    const statusSub = this.socketService.currentUserStatus$.subscribe(status => {
+      this.currentUserStatus = status as any;
+      console.log('📊 Current user status updated:', status);
+      // Update localStorage when status changes
+      if (this.currentUserId) {
+        localStorage.setItem(`userStatus_${this.currentUserId}`, status);
+      }
+    });
+    this.socketSubscriptions.push(statusSub);
+
+    // Online Users überwachen
+    const onlineUsersSub = this.socketService.onlineUsers$.subscribe(users => {
+      this.onlineUsers = users;
+      console.log('👥 Online users updated:', users);
+      this.updateFriendsOnlineStatus(users);
+      // Force change detection by updating the friends array reference
+      this.friends = [...this.friends];
+    });
+    this.socketSubscriptions.push(onlineUsersSub);
+
+    // Enhanced Notifications überwachen
+    const notificationSub = this.socketService.notifications$.subscribe(notifications => {
+      this.notifications = notifications;
+    });
     this.socketSubscriptions.push(notificationSub);
   }
-
   // Real-time Benachrichtigungen verarbeiten
-  private handleRealTimeNotification(notification: FriendRequestNotification) {
+  private handleRealTimeNotification(notification: SocketNotification) {
     console.log('📱 Real-time notification:', notification);
     
     // Notification zur Liste hinzufügen
@@ -170,7 +232,7 @@ export class FriendsComponent implements OnInit, OnDestroy {
   }
 
   // Notification entfernen
-  removeNotification(notification: FriendRequestNotification) {
+  removeNotification(notification: SocketNotification) {
     const index = this.notifications.indexOf(notification);
     if (index > -1) {
       this.notifications.splice(index, 1);
@@ -394,8 +456,209 @@ export class FriendsComponent implements OnInit, OnDestroy {
     return user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`;
   }
 
+  // Enhanced Status Methods
+  updateFriendsOnlineStatus(onlineUsers: OnlineUser[]): void {
+    if (!this.friends) return;
+
+    console.log('🔄 Updating friends online status:', { friends: this.friends.length, onlineUsers: onlineUsers.length });
+
+    this.friends.forEach(friend => {
+      const onlineUser = onlineUsers.find(u => u.userId === parseInt(friend.id.toString()));
+      if (onlineUser) {
+        (friend as any).isOnline = onlineUser.isOnline;
+        (friend as any).status = onlineUser.status;
+        (friend as any).lastSeen = onlineUser.lastSeen;
+        (friend as any).lastActivity = onlineUser.lastActivity;
+        console.log(`👤 Updated friend ${friend.id}: ${onlineUser.status} (${onlineUser.isOnline ? 'online' : 'offline'})`);
+      } else {
+        (friend as any).isOnline = false;
+        (friend as any).status = 'OFFLINE';
+        console.log(`👤 Friend ${friend.id} set to offline (not found in online users)`);
+      }
+    });
+  }
+
+  changeUserStatus(newStatus: 'ONLINE' | 'AWAY' | 'DO_NOT_DISTURB'): void {
+    this.currentUserStatus = newStatus;
+    this.socketService.updateStatus(newStatus);
+    this.showStatusSelector = false;
+    
+    // Request updated online friends list after status change
+    setTimeout(() => {
+      this.socketService.getOnlineFriends();
+    }, 500);
+  }
+
+  toggleStatusSelector(): void {
+    this.showStatusSelector = !this.showStatusSelector;
+  }
+
+  // Status Display Methods
+  getStatusText(status: string): string {
+    switch (status) {
+      case 'ONLINE': return 'Online';
+      case 'AWAY': return 'Abwesend';
+      case 'DO_NOT_DISTURB': return 'Nicht stören';
+      default: return 'Offline';
+    }
+  }
+
+  getStatusClass(status: string): string {
+    switch (status) {
+      case 'ONLINE': return 'border-green-500 text-green-700';
+      case 'AWAY': return 'border-yellow-500 text-yellow-700';
+      case 'DO_NOT_DISTURB': return 'border-red-500 text-red-700';
+      default: return 'border-gray-500 text-gray-700';
+    }
+  }
+
+  getStatusDotClass(status: string): string {
+    switch (status) {
+      case 'ONLINE': return 'bg-green-500';
+      case 'AWAY': return 'bg-yellow-500';
+      case 'DO_NOT_DISTURB': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  }
+
+  formatLastSeen(lastSeen: string): string {
+    return this.socketService.formatLastSeen(lastSeen);
+  }
+
+  // Profile View Method
+  viewProfile(userId: string): void {
+    this.router.navigate(['/profile', userId]);
+  }
+
+  // Check Friend Status
+  checkFriendStatus(friendId: string): void {
+    this.socketService.requestFriendStatus(friendId);
+  }
+
+  // Get Online Users Count
+  getOnlineUsersCount(): number {
+    return this.onlineUsers.filter(user => user.isOnline).length;
+  }
+
+  // Check if user is online
+  isUserOnline(userId: string): boolean {
+    return this.socketService.isUserOnline(userId);
+  }
+
+  // Get user online status
+  getUserOnlineStatus(userId: string): OnlineUser | null {
+    return this.socketService.getUserStatus(userId);
+  }
+
   // TrackBy Funktion für Notifications
-  trackNotification(index: number, notification: FriendRequestNotification): string {
-    return notification.timestamp;
+  trackNotification(index: number, notification: SocketNotification): string {
+    return notification.timestamp.toString();
+  }
+
+  // TrackBy Funktion für Friends
+  trackFriend(index: number, friendship: any): string {
+    return friendship.friend?.id || friendship.id || index.toString();
+  }
+
+  // Direct Message Functionality
+  startDirectMessage(friend: any): void {
+    console.log('Starting direct message with:', friend.username);
+    // Navigate to chat with pre-selected direct message
+    this.router.navigate(['/chat'], { 
+      queryParams: { 
+        dm: friend.id,
+        username: friend.username 
+      }
+    });
+  }
+
+  // Group Invite Modal Methods
+  showGroupInviteModal(friend: any): void {
+    this.selectedFriendForInvite = friend;
+    this.showGroupInviteModalFlag = true;
+    this.loadAvailableGroups();
+  }
+
+  closeGroupInviteModal(): void {
+    this.showGroupInviteModalFlag = false;
+    this.selectedFriendForInvite = null;
+    this.selectedGroupForInvite = null;
+    this.inviteMessage = '';
+    this.isInviting = false;
+  }
+
+  selectGroupForInvite(group: any): void {
+    this.selectedGroupForInvite = group;
+  }
+
+  async loadAvailableGroups(): Promise<void> {
+    try {
+      // In a real implementation, this would fetch from a chat service
+      // For now, we'll use mock data or try to get from chat service
+      console.log('Loading available groups...');
+      
+      // Mock data for demonstration
+      this.availableGroups = [
+        {
+          id: '1',
+          name: 'Fitness Buddies',
+          description: 'Gemeinsam fit werden!',
+          memberCount: 12,
+          isPrivate: false
+        },
+        {
+          id: '2',
+          name: 'Workout Squad',
+          description: 'Tägliche Motivation und Workouts',
+          memberCount: 8,
+          isPrivate: false
+        },
+        {
+          id: '3',
+          name: 'Gym Gang',
+          description: 'Alles rund ums Gym',
+          memberCount: 15,
+          isPrivate: true
+        }
+      ];
+      
+      // TODO: Replace with actual API call
+      // this.availableGroups = await this.chatService.getUserServers();
+      
+    } catch (error) {
+      console.error('Error loading available groups:', error);
+      this.availableGroups = [];
+    }
+  }
+
+  async sendGroupInvite(): Promise<void> {
+    if (!this.selectedGroupForInvite || !this.selectedFriendForInvite || this.isInviting) {
+      return;
+    }
+
+    try {
+      this.isInviting = true;
+      
+      // TODO: Implement actual group invite API call
+      console.log('Sending group invite:', {
+        friendId: this.selectedFriendForInvite.id,
+        groupId: this.selectedGroupForInvite.id,
+        message: this.inviteMessage
+      });
+
+      // Mock API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Show success message (you could use a toast service here)
+      alert(`Einladung an ${this.selectedFriendForInvite.username} für "${this.selectedGroupForInvite.name}" wurde gesendet!`);
+      
+      this.closeGroupInviteModal();
+      
+    } catch (error) {
+      console.error('Error sending group invite:', error);
+      alert('Fehler beim Senden der Einladung. Bitte versuche es erneut.');
+    } finally {
+      this.isInviting = false;
+    }
   }
 }

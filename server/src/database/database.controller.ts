@@ -207,8 +207,9 @@ export class DatabaseController {
     });
   }
 
-    @Post('promote-admin')
+  @Post('promote-admin')
   async promoteToAdmin(@Body() { email }: { email: string }) {
-    return await this.prisma.$executeRaw`UPDATE users SET role = 'SUPER_ADMIN' WHERE email = ${email}`;
+    return await this.prisma
+      .$executeRaw`UPDATE users SET role = 'SUPER_ADMIN' WHERE email = ${email}`;
   }
 }

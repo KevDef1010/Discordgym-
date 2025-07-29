@@ -2,6 +2,77 @@
 <div class="min-h-screen bg-gray-900 text-white p-6">
   <div class="max-w-6xl mx-auto">
     
+    <!-- Enhanced Header with Status -->
+    <div class="mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-3xl font-bold">Freunde</h1>
+        
+        <!-- Connection & Status Info -->
+        <div class="flex items-center space-x-4">
+          <!-- Connection Status -->
+          <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-1">
+              <div 
+                class="w-3 h-3 rounded-full"
+                [class]="isSocketConnected ? 'bg-green-500' : 'bg-red-500'"
+              ></div>
+              <span class="text-sm text-gray-300">
+                {{ isSocketConnected ? 'Verbunden' : 'Getrennt' }}
+              </span>
+            </div>
+            
+            <!-- Online Users Count -->
+            <span class="text-sm text-gray-400" *ngIf="isSocketConnected">
+              ({{ getOnlineUsersCount() }} online)
+            </span>
+          </div>
+
+          <!-- User Status Selector -->
+          <div class="relative">
+            <button 
+              (click)="toggleStatusSelector()"
+              class="flex items-center space-x-2 px-3 py-2 rounded border text-sm"
+              [class]="getStatusClass(currentUserStatus)"
+            >
+              <div class="w-3 h-3 rounded-full" [class]="getStatusDotClass(currentUserStatus)"></div>
+              <span>{{ getStatusText(currentUserStatus) }}</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+
+            <!-- Status Dropdown -->
+            <div 
+              *ngIf="showStatusSelector"
+              class="absolute top-full right-0 mt-1 bg-gray-800 border border-gray-700 rounded shadow-lg z-10"
+            >
+              <button 
+                (click)="changeUserStatus('ONLINE')"
+                class="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center space-x-2 text-sm"
+              >
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                <span>Online</span>
+              </button>
+              <button 
+                (click)="changeUserStatus('AWAY')"
+                class="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center space-x-2 text-sm"
+              >
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <span>Abwesend</span>
+              </button>
+              <button 
+                (click)="changeUserStatus('DO_NOT_DISTURB')"
+                class="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center space-x-2 text-sm"
+              >
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <span>Nicht stören</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <!-- Real-time Notifications -->
     <div class="fixed top-4 right-4 z-50 space-y-2" *ngIf="notifications.length > 0">
       <div 
@@ -146,15 +217,82 @@
 
           <!-- Freunde Liste -->
           <div *ngIf="!friendsLoading && friends.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div *ngFor="let friendship of friends" class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors">
+            <div *ngFor="let friendship of friends; trackBy: trackFriend" class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors">
               <div class="flex items-center space-x-3">
-                <img [src]="getAvatarUrl(friendship.friend)" [alt]="friendship.friend.username" class="w-12 h-12 rounded-full">
-                <div class="flex-1">
-                  <h3 class="font-semibold">{{friendship.friend.username}}</h3>
-                  <p class="text-sm text-gray-400">{{getDisplayName(friendship.friend)}}</p>
-                  <p class="text-xs text-gray-500">Seit {{friendship.createdAt | date:'shortDate'}}</p>
+                <!-- Avatar with Status Indicator -->
+                <div class="relative">
+                  <img [src]="getAvatarUrl(friendship.friend)" [alt]="friendship.friend.username" class="w-12 h-12 rounded-full">
+                  <!-- Online Status Dot -->
+                  <div 
+                    class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-gray-700"
+                    [ngClass]="getStatusDotClass(getUserOnlineStatus(friendship.friend.id)?.status || 'OFFLINE')"
+                  ></div>
                 </div>
+                
+                <div class="flex-1">
+                  <div class="flex items-center space-x-2">
+                    <h3 class="font-semibold">{{friendship.friend.username}}</h3>
+                    <!-- Online Status Badge -->
+                    <span 
+                      class="px-2 py-1 rounded-full text-xs"
+                      [ngClass]="isUserOnline(friendship.friend.id) ? 'bg-green-600 text-green-100' : 'bg-gray-600 text-gray-300'"
+                    >
+                      {{ getStatusText(getUserOnlineStatus(friendship.friend.id)?.status || 'OFFLINE') }}
+                    </span>
+                  </div>
+                  <p class="text-sm text-gray-400">{{getDisplayName(friendship.friend)}}</p>
+                  
+                  <!-- Enhanced Status Info -->
+                  <p class="text-xs text-gray-500">
+                    <span *ngIf="isUserOnline(friendship.friend.id); else lastSeenTemplate">
+                      Seit {{friendship.createdAt | date:'shortDate'}} • Online
+                    </span>
+                    <ng-template #lastSeenTemplate>
+                      Seit {{friendship.createdAt | date:'shortDate'}} • 
+                      <span *ngIf="getUserOnlineStatus(friendship.friend.id)?.lastSeen">
+                        Zuletzt online: {{ formatLastSeen(getUserOnlineStatus(friendship.friend.id)?.lastSeen!.toString()) }}
+                      </span>
+                      <span *ngIf="!getUserOnlineStatus(friendship.friend.id)?.lastSeen">Offline</span>
+                    </ng-template>
+                  </p>
+                </div>
+                
                 <div class="flex space-x-2">
+                  <!-- Message Button -->
+                  <button 
+                    (click)="startDirectMessage(friendship.friend)"
+                    class="px-3 py-1 rounded text-xs bg-purple-600 hover:bg-purple-700 transition-colors"
+                    title="Direktnachricht senden"
+                  >
+                    💬 Nachricht
+                  </button>
+                  
+                  <!-- Invite to Group Button -->
+                  <button 
+                    (click)="showGroupInviteModal(friendship.friend)"
+                    class="px-3 py-1 rounded text-xs bg-green-600 hover:bg-green-700 transition-colors"
+                    title="Zu Gruppe einladen"
+                  >
+                    👥 Einladen
+                  </button>
+                  
+                  <!-- Profile Button -->
+                  <button 
+                    (click)="viewProfile(friendship.friend.id)"
+                    class="px-3 py-1 rounded text-xs bg-blue-600 hover:bg-blue-700 transition-colors"
+                  >
+                    👤 Profil
+                  </button>
+                  
+                  <!-- Status Check Button -->
+                  <button 
+                    (click)="checkFriendStatus(friendship.friend.id)"
+                    class="px-3 py-1 rounded text-xs bg-gray-600 hover:bg-gray-700 transition-colors"
+                  >
+                    📊 Status
+                  </button>
+                  
+                  <!-- Remove Friend Button -->
                   <button 
                     (click)="removeFriend(friendship.friend.id)"
                     [disabled]="isButtonDisabled('removeFriend', friendship.friend.id)"
@@ -165,6 +303,54 @@
                       <span class="animate-spin rounded-full h-3 w-3 border-b border-white mr-1"></span>
                       Entfernen...
                     </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Online Users Section -->
+          <div *ngIf="onlineUsers.length > 0 && isSocketConnected" class="mt-8">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-semibold text-green-400">👥 Online Benutzer ({{ getOnlineUsersCount() }})</h3>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div 
+                *ngFor="let user of onlineUsers" 
+                class="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-750 transition-colors"
+              >
+                <div class="flex items-center space-x-3">
+                  <!-- Avatar with Status -->
+                  <div class="relative">
+                    <img 
+                      [src]="user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.username" 
+                      [alt]="user.username"
+                      class="w-10 h-10 rounded-full"
+                    >
+                    <div 
+                      class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-gray-800"
+                      [ngClass]="getStatusDotClass(user.status)"
+                    ></div>
+                  </div>
+                  
+                  <div class="flex-1 min-w-0">
+                    <h4 class="font-medium text-white truncate">{{ user.username }}</h4>
+                    <p class="text-sm text-gray-400">{{ getStatusText(user.status) }}</p>
+                    <p class="text-xs text-gray-500" *ngIf="user.lastActivity">
+                      Aktiv: {{ formatLastSeen(user.lastActivity.toString()) }}
+                    </p>
+                  </div>
+                  
+                  <!-- Quick Action Button -->
+                  <button 
+                    (click)="viewProfile(user.userId.toString())"
+                    class="p-2 text-gray-400 hover:text-white hover:bg-gray-600 rounded-full transition-colors"
+                    title="Profil anzeigen"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -341,6 +527,102 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Group Invite Modal -->
+<div *ngIf="showGroupInviteModalFlag" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold text-white">
+        {{ selectedFriendForInvite?.username }} zu Gruppe einladen
+      </h3>
+      <button 
+        (click)="closeGroupInviteModal()"
+        class="text-gray-400 hover:text-white transition-colors"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="space-y-4">
+      <!-- Available Groups/Servers -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">
+          Verfügbare Gruppen/Server
+        </label>
+        
+        <div *ngIf="availableGroups.length > 0" class="space-y-2 max-h-48 overflow-y-auto">
+          <div 
+            *ngFor="let group of availableGroups"
+            (click)="selectGroupForInvite(group)"
+            [class]="selectedGroupForInvite?.id === group.id ? 
+              'bg-purple-600 hover:bg-purple-700' : 'bg-gray-700 hover:bg-gray-600'"
+            class="p-3 rounded-lg cursor-pointer transition-colors"
+          >
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 bg-gray-600 rounded-lg flex items-center justify-center">
+                <span class="text-lg font-bold">{{ group.name.charAt(0).toUpperCase() }}</span>
+              </div>
+              <div class="flex-1">
+                <h4 class="font-medium text-white">{{ group.name }}</h4>
+                <p class="text-sm text-gray-400">{{ group.description || 'Keine Beschreibung' }}</p>
+                <p class="text-xs text-gray-500">{{ group.memberCount || 0 }} Mitglieder</p>
+              </div>
+              <div *ngIf="selectedGroupForInvite?.id === group.id" class="text-purple-300">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="availableGroups.length === 0" class="text-center py-6 text-gray-400">
+          <svg class="mx-auto h-12 w-12 mb-2" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p>Keine Gruppen verfügbar</p>
+          <p class="text-sm mt-1">Erstelle zuerst eine Gruppe im Chat</p>
+        </div>
+      </div>
+      
+      <!-- Invitation Message -->
+      <div *ngIf="selectedGroupForInvite">
+        <label class="block text-sm font-medium text-gray-300 mb-2">
+          Einladungsnachricht (optional)
+        </label>
+        <textarea
+          [(ngModel)]="inviteMessage"
+          placeholder="Schreibe eine persönliche Nachricht..."
+          rows="3"
+          class="w-full bg-gray-700 text-white placeholder-gray-400 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        ></textarea>
+      </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="flex space-x-3 mt-6">
+      <button
+        (click)="closeGroupInviteModal()"
+        class="flex-1 bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-4 py-2 font-medium transition-colors"
+      >
+        Abbrechen
+      </button>
+      <button
+        (click)="sendGroupInvite()"
+        [disabled]="!selectedGroupForInvite || isInviting"
+        class="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 font-medium transition-colors"
+      >
+        <span *ngIf="!isInviting">Einladung senden</span>
+        <span *ngIf="isInviting" class="flex items-center justify-center">
+          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+          Sende...
+        </span>
+      </button>
     </div>
   </div>
 </div>
