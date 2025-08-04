@@ -4,6 +4,35 @@ Eine moderne Full-Stack Webanwendung mit **Angular Frontend** und **NestJS Backe
 
 ## 🚀 Quick Start für Professor
 
+### **🎯 Super Einfache Start-Befehle:**
+
+```bash
+# Port 4200 (Production-like)
+npm run start:4200
+
+# Port 4201 (Development) 
+npm run start:4201
+
+# Port 4202 (Additional Testing)
+npm run start:4202
+```
+
+### **⚡ Einzeln starten:**
+
+```bash
+# Nur Frontend Port 4200
+cd client && npm run start:4200
+
+# Nur Frontend Port 4201  
+cd client && npm run start:4201
+
+# Nur Frontend Port 4202
+cd client && npm run start:4202
+
+# Nur Backend (unterstützt alle Ports)
+cd server && npm run start:dev
+```
+
 ### **Option 1: Automatischer Start (empfohlen)**
 ```bash
 # Windows:
@@ -27,7 +56,7 @@ npm start
 ```
 
 ### **Demo öffnen:**
-- **Frontend:** http://localhost:4200
+- **Frontend:** http://localhost:4200, http://localhost:4201 oder http://localhost:4202
 - **Backend API:** http://localhost:3000
 
 ---
@@ -113,25 +142,60 @@ cd DiscordGym
 
 # Alles installieren und starten
 npm run install:all
-npm start
+
+# Port 4201 starten (Development)
+npm run start:4201
+
+# ODER Port 4200 starten (Production-like)
+npm run start:4200
 ```
 
 **Das war's!** 🎉 
-- Frontend läuft auf: **http://localhost:4200/**
+- Frontend läuft auf: **http://localhost:4200/**, **http://localhost:4201/** oder **http://localhost:4202/**
 - Backend läuft auf: **http://localhost:3000/**
+
+### 🔧 Port-Testing Optionen
+
+```bash
+# Standard Development (Port 4201)
+npm run start:4201
+
+# Production Testing (Port 4200)  
+npm run start:4200
+
+# Additional Testing (Port 4202)
+npm run start:4202
+
+# Alle Ports gleichzeitig (zum Vergleichen):
+# Terminal 1: npm run start:4200
+# Terminal 2: npm run start:4201  
+# Terminal 3: npm run start:4202
+```
 
 ### Alternative Methoden
 
 #### Option 1: Batch-Datei (Windows)
 ```bash
-# Doppelklick auf start.bat oder:
-start.bat
+# Port 4200:
+start-4200.bat
+
+# Port 4201:  
+start-4201.bat
+
+# Port 4202:
+start-4202.bat
 ```
 
 #### Option 2: Shell-Script (Linux/Mac)
 ```bash
-chmod +x start.sh
-./start.sh
+# Port 4200:
+chmod +x start-4200.sh && ./start-4200.sh
+
+# Port 4201:
+chmod +x start-4201.sh && ./start-4201.sh
+
+# Port 4202:
+chmod +x start-4202.sh && ./start-4202.sh
 ```
 
 #### Option 3: Manuell (wie bisher)
@@ -139,8 +203,14 @@ chmod +x start.sh
 # Terminal 1 - Backend
 cd server && npm install && npm run start:dev
 
-# Terminal 2 - Frontend  
-cd client && npm install && npm start
+# Terminal 2 - Frontend Port 4200 
+cd client && npm install && npm run start:4200
+
+# ODER Terminal 2 - Frontend Port 4201
+cd client && npm install && npm run start:4201
+
+# ODER Terminal 2 - Frontend Port 4202  
+cd client && npm install && npm run start:4202
 ```
 
 ## 🖥️ Anwendung starten
@@ -148,9 +218,13 @@ cd client && npm install && npm start
 ### Option 1: Nur Frontend (Entwicklung)
 ```bash
 cd client
-npm start
+npm run start:4201    # Development Port
+# oder
+npm run start:4200    # Production-like Port
+# oder  
+npm run start:4202    # Additional Testing Port
 ```
-- Frontend läuft auf: **http://localhost:4200/**
+- Frontend läuft auf: **http://localhost:4200/**, **http://localhost:4201/** oder **http://localhost:4202/**
 - Hot-Reload aktiviert (Änderungen werden automatisch übernommen)
 
 ### Option 2: Frontend + Backend
@@ -180,13 +254,19 @@ npm run start:prod
 
 ## 📝 Verfügbare Scripts
 
-### Root-Level (Ein-Befehl-Lösungen)
-- `npm start` - 🚀 **Startet Frontend + Backend parallel**
+### 🎯 Root-Level (Ein-Befehl-Lösungen)
+- `npm run start:4200` - 🚀 **Frontend (Port 4200) + Backend parallel**
+- `npm run start:4201` - 🚀 **Frontend (Port 4201) + Backend parallel**
+- `npm run start:4202` - 🚀 **Frontend (Port 4202) + Backend parallel**
+- `npm start` - 🚀 **Startet Frontend (4201) + Backend parallel**
 - `npm run dev` - Alias für `npm start`
 - `npm run install:all` - Installiert alle Dependencies
 - `npm run build` - Erstellt Production Builds für beide
 
 ### Frontend (client/)
+- `npm run start:4200` - Frontend auf Port 4200
+- `npm run start:4201` - Frontend auf Port 4201
+- `npm run start:4202` - Frontend auf Port 4202
 - `npm run start:client-only` - Nur Frontend starten
 - `npm run build:client` - Frontend Build
 - `npm test` - Frontend Tests
@@ -195,6 +275,14 @@ npm run start:prod
 - `npm run start:server` - Nur Backend starten  
 - `npm run build:server` - Backend Build
 - `npm test` - Backend Tests
+
+### 🔧 Port-Übersicht
+| Port | Service | Environment | Verwendung |
+|------|---------|-------------|------------|
+| 3000 | Backend | Development | API Server |
+| 4200 | Frontend | Production-like | Testing Production config |
+| 4201 | Frontend | Development | Testing Development config |
+| 4202 | Frontend | Additional | Extra Testing/Demo Port |
 
 ## 🎨 Styling mit Tailwind CSS
 
@@ -293,6 +381,5 @@ nest generate service my-service
 
 ---
 
-**Autor**: [Dein Name]  
 **Datum**: Juli 2025  
 **Version**: 1.0.0

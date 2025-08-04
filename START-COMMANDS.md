@@ -1,3 +1,42 @@
+# 🚀 DiscordGym - Port Testing Commands
+
+## 🎯 **Super Einfache Terminal-Befehle:**
+
+### **🔥 Komplett-Start (Backend + Frontend):**
+
+```bash
+# Port 4200 (Production-like)
+npm run start:4200
+
+# Port 4201 (Development) 
+npm run start:4201
+```
+
+### **⚡ Einzeln starten:**
+
+```bash
+# Nur Frontend Port 4200
+cd client && npm run start:4200
+
+# Nur Frontend Port 4201  
+cd client && npm run start:4201
+
+# Nur Backend (unterstützt beide Ports)
+cd server && npm run start:dev
+```
+
+### **🎯 Schnell-Befehle:**
+
+```bash
+# Standard Development
+npm run start:4201
+
+# Production Testing  
+npm run start:4200
+```
+
+---
+
 # 🚀 DiscordGym - Schnellstart Commands
 
 ## 🎯 **Alles starten - Reihenfolge:**

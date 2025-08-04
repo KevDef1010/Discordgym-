@@ -4,13 +4,18 @@ import {
   ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto, LoginDto, AuthResponseDto } from './dto/auth.dto';
+import { JwtPayload } from './jwt.strategy';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
   private generateDiscordId(): string {
     // Generate a random 18-digit Discord-like ID
@@ -85,9 +90,13 @@ export class AuthService {
       },
     });
 
+    // Generate JWT Token for new user
+    const token = this.generateJwtToken(user);
+
     return {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       user: user as any,
+      token,
       message: 'Registration successful! Welcome to DiscordGym! 🏋️‍♂️',
     };
   }
@@ -119,11 +128,25 @@ export class AuthService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userWithoutPassword } = user;
 
+    // Generate JWT Token
+    const token = this.generateJwtToken(userWithoutPassword);
+
     return {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       user: userWithoutPassword as any,
+      token,
       message: 'Login successful! Welcome back! 💪',
     };
+  }
+
+  private generateJwtToken(user: any): string {
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+    };
+    return this.jwtService.sign(payload);
   }
 
   async checkUserExists(email: string, username: string, discordId?: string) {

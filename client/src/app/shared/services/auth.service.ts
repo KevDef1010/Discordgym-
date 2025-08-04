@@ -17,6 +17,7 @@ export interface User {
 
 export interface AuthResponse {
   user: User;
+  token: string;
   message: string;
 }
 
@@ -60,6 +61,7 @@ export class AuthService {
         tap(response => {
           if (isPlatformBrowser(this.platformId)) {
             localStorage.setItem('currentUser', JSON.stringify(response.user));
+            localStorage.setItem('authToken', response.token);
           }
           this.currentUserSubject.next(response.user);
         })
@@ -72,6 +74,7 @@ export class AuthService {
         tap(response => {
           if (isPlatformBrowser(this.platformId)) {
             localStorage.setItem('currentUser', JSON.stringify(response.user));
+            localStorage.setItem('authToken', response.token);
           }
           this.currentUserSubject.next(response.user);
         })
@@ -81,6 +84,7 @@ export class AuthService {
   logout(): void {
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
     }
     this.currentUserSubject.next(null);
   }

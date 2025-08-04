@@ -1,0 +1,104 @@
+name: DiscordGym CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      # Server Tests
+      - name: Install Server Dependencies
+        working-directory: ./server
+        run: npm ci
+        
+      - name: Run Server Tests
+        working-directory: ./server
+        run: npm test
+      
+      # Client Tests  
+      - name: Install Client Dependencies
+        working-directory: ./client
+        run: npm ci
+        
+      - name: Run Client Tests
+        working-directory: ./client
+        run: npm test -- --no-watch --browsers=ChromeHeadless
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      # Build Client
+      - name: Install Client Dependencies
+        working-directory: ./client
+        run: npm ci
+        
+      - name: Build Client
+        working-directory: ./client
+        run: npm run build:prod
+        
+      # Build Server  
+      - name: Install Server Dependencies
+        working-directory: ./server
+        run: npm ci
+        
+      - name: Build Server
+        working-directory: ./server
+        run: npm run build
+        
+      # Option A: Deploy to Self-Hosted Server
+      - name: Setup SSH
+        if: ${{ vars.DEPLOYMENT_TYPE == 'self-hosted' }}
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          
+      - name: Deploy to Server
+        if: ${{ vars.DEPLOYMENT_TYPE == 'self-hosted' }}
+        run: |
+          rsync -avz --exclude=node_modules ./server/dist/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:/opt/discordgym/api/
+          rsync -avz ./client/dist/browser/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:/opt/discordgym/frontend/
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "cd /opt/discordgym && docker-compose -f docker-compose.prod.yml up -d --build"
+          
+      # Option B: Deploy to Cloud Services
+      # Frontend to Vercel
+      - name: Deploy Frontend to Vercel
+        if: ${{ vars.DEPLOYMENT_TYPE == 'cloud' }}
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID}}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID}}
+          working-directory: ./client/dist/browser
+          
+      # Backend to Render or similar
+      - name: Deploy Backend to Render
+        if: ${{ vars.DEPLOYMENT_TYPE == 'cloud' }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json"

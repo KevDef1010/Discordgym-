@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
 
 export interface CreateServerDto {
@@ -21,6 +22,7 @@ export interface SendMessageDto {
   receiverId?: string;
 }
 
+@UseGuards(JwtAuthGuard)
 @Controller('chat')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
@@ -53,12 +55,13 @@ export class ChatController {
   @Post('channels/:channelId/messages')
   async sendChannelMessage(
     @Param('channelId') channelId: string,
-    @Body() sendMessageDto: SendMessageDto
+    @Body() sendMessageDto: SendMessageDto,
+    @Request() req,
   ) {
     return this.chatService.sendChannelMessage({
       content: sendMessageDto.content,
-      senderId: sendMessageDto.receiverId || 'temp-user', // TODO: Get from auth
-      channelId: channelId
+      senderId: req.user.id, // ← User aus JWT Token
+      channelId: channelId,
     });
   }
 
@@ -75,12 +78,13 @@ export class ChatController {
   @Post('direct/:friendId/messages')
   async sendDirectMessage(
     @Param('friendId') friendId: string,
-    @Body() sendMessageDto: SendMessageDto
+    @Body() sendMessageDto: SendMessageDto,
+    @Request() req,
   ) {
     return this.chatService.sendDirectMessage({
       content: sendMessageDto.content,
-      senderId: sendMessageDto.receiverId || 'temp-user', // TODO: Get from auth
-      receiverId: friendId
+      senderId: req.user.id, // ← User aus JWT Token
+      receiverId: friendId,
     });
   }
 
