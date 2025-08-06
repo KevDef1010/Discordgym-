@@ -29,9 +29,20 @@
       
       <!-- Direct Messages Tab -->
       <div *ngIf="activeTab === 'direct'" class="p-4">
-        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
-          Direktnachrichten
-        </h3>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+            Direktnachrichten
+          </h3>
+          <button 
+            (click)="openFriendChatModal()"
+            class="text-purple-400 hover:text-purple-300 transition-colors"
+            title="Chat mit Freund starten"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+          </button>
+        </div>
         
         <!-- Direct Messages List -->
         <div class="space-y-2" *ngIf="directMessages.length > 0; else noDirectMessages">
@@ -87,6 +98,12 @@
             </svg>
             <p class="text-sm">Keine Direktnachrichten</p>
             <p class="text-xs text-gray-500 mt-1">Füge Freunde hinzu, um zu chatten</p>
+            <!-- Start Chat Button -->
+            <button 
+              (click)="startDirectChat('1', 'TestUser')" 
+              class="mt-4 bg-purple-600 hover:bg-purple-700 text-white rounded px-4 py-2 text-sm font-medium">
+              Chat starten
+            </button>
           </div>
         </ng-template>
       </div>
@@ -423,5 +440,54 @@
         </button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Friend Chat Modal -->
+<div *ngIf="showFriendChatModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+    <h3 class="text-lg font-semibold text-white mb-4">Chat mit Freund starten</h3>
+    
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Freund auswählen</label>
+        <div class="space-y-2 max-h-60 overflow-y-auto">
+          <!-- Keine Freunde Meldung -->
+          <div *ngIf="directMessages.length === 0" class="text-gray-400 p-2 text-center">
+            Keine Freunde gefunden.
+          </div>
+          
+          <!-- Dynamische Freundesliste -->
+          <div 
+            *ngFor="let friend of directMessages"
+            class="flex items-center p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors"
+            (click)="startDirectChat(friend.userId, friend.username); showFriendChatModal = false;"
+          >
+            <div *ngIf="friend.avatar; else avatarPlaceholder" class="w-10 h-10 rounded-full mr-3">
+              <img [src]="friend.avatar" class="w-10 h-10 rounded-full object-cover" alt="{{friend.username}}">
+            </div>
+            <ng-template #avatarPlaceholder>
+              <div class="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center mr-3">
+                <span class="text-white">{{friend.username.charAt(0).toUpperCase()}}</span>
+              </div>
+            </ng-template>
+            <span class="text-white">{{friend.username}}</span>
+            <div class="ml-auto flex items-center">
+              <div [class]="'w-2 h-2 rounded-full ' + getStatusColor(getUserStatus(friend.userId))"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex space-x-3 pt-4">
+        <button
+          type="button"
+          (click)="showFriendChatModal = false"
+          class="w-full bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-4 py-2 font-medium transition-colors"
+        >
+          Abbrechen
+        </button>
+      </div>
+    </div>
   </div>
 </div>

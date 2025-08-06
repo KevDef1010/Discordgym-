@@ -198,35 +198,91 @@ export class ChatService {
     });
   }
 
-  // Get user's friends
+    // Get user's friends
   async getFriends(userId: string) {
+    // Find approved friendships where the user is either the initiator or the receiver
     const friendships = await this.prisma.friendship.findMany({
       where: {
         OR: [
-          { senderId: userId, status: 'ACCEPTED' },
-          { receiverId: userId, status: 'ACCEPTED' }
+          { initiatorId: userId, status: 'APPROVED' },
+          { receiverId: userId, status: 'APPROVED' }
         ]
       },
       include: {
-        sender: {
+        initiator: {
           select: {
             id: true,
             username: true,
-            avatar: true
+            email: true,
+            avatar: true,
+            displayId: true
           }
         },
         receiver: {
           select: {
             id: true,
             username: true,
-            avatar: true
+            email: true,
+            avatar: true,
+            displayId: true
           }
         }
       }
     });
 
-    return friendships.map(friendship => 
-      friendship.senderId === userId ? friendship.receiver : friendship.sender
-    );
+    // Convert to a list of friends
+    const friends = friendships.map(friendship => {
+      // If user is the initiator, return the receiver as friend
+      if (friendship.initiatorId === userId) {
+        return friendship.receiver;
+      }
+      // If user is the receiver, return the initiator as friend
+      return friendship.initiator;
+    });
+
+    return friends;
+  }
+  
+  // Get or create a direct chat with a user
+  async getOrCreateDirectChat(currentUserId: string, targetUserId: string) {
+    // First, check if the users are friends
+    const isFriend = await this.prisma.friendship.findFirst({
+      where: {
+        AND: [
+          {
+            OR: [
+              { senderId: currentUserId, receiverId: targetUserId },
+              { senderId: targetUserId, receiverId: currentUserId }
+            ]
+          },
+          { status: 'ACCEPTED' }
+        ]
+      }
+    });
+    
+    if (!isFriend) {
+      throw new Error('Users are not friends');
+    }
+    
+    // Get target user details for the chat
+    const targetUser = await this.prisma.user.findUnique({
+      where: {
+        id: targetUserId
+      },
+      select: {
+        id: true,
+        username: true,
+        avatar: true
+      }
+    });
+    
+    if (!targetUser) {
+      throw new Error('Target user not found');
+    }
+    
+    // We don't actually need to create anything in the DB here,
+    // since direct messages are just stored with sender and receiver IDs
+    // Return the target user info for the chat UI
+    return targetUser;
   }
 }

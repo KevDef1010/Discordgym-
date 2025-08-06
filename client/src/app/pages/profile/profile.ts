@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router } from '@angular/router';
 import { AuthService, User } from '../../shared/services/auth.service';
 import { ButtonComponent } from '../../shared/components/button/button';
+import { ChatService } from '../../shared/services/chat.service';
 
 @Component({
   selector: 'app-profile',
@@ -22,7 +23,8 @@ export class ProfileComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private chatService: ChatService
   ) {
     this.profileForm = this.fb.group({
       username: ['', [Validators.required, Validators.minLength(3)]],
@@ -83,5 +85,13 @@ export class ProfileComponent implements OnInit {
       // Implement account deletion logic here
       console.log('Account deletion requested');
     }
+  }
+  
+  startChat(): void {
+    if (!this.currentUser) return;
+    
+    // Instead of trying to chat with yourself, just navigate to the chat page
+    // This prevents the infinite loop issue
+    this.router.navigate(['/chat']);
   }
 }

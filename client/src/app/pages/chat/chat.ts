@@ -95,6 +95,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   // Modal states
   showServerModal = false;
   showChannelModal = false;
+  showFriendChatModal = false;
   
   // New server/channel form data
   newServerName = '';
@@ -116,16 +117,69 @@ export class ChatComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.authService.currentUser$.subscribe(user => {
-      this.currentUser = user;
-      if (!user) {
-        this.router.navigate(['/login']);
-        return;
+    // Get user once directly without subscribing
+    this.currentUser = this.authService.getCurrentUser();
+    
+    if (!this.currentUser) {
+      // Let the AuthGuard handle navigation to login
+      console.log('No authenticated user found for chat component');
+      return;
+    }
+    
+    // Clear URL parameters first thing to prevent loops
+    const url = new URL(window.location.href);
+    const dmUserId = url.searchParams.get('dm');
+    const dmUsername = url.searchParams.get('username');
+    
+    // Always clear URL params to prevent loops
+    if (url.search) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    // Load data first
+    this.loadChatData().then(() => {
+      // Then handle direct message parameters if they exist
+      if (dmUserId && dmUsername && dmUserId !== this.currentUser?.id) {
+        this.handleDirectMessageFromUrl(dmUserId, dmUsername);
       }
-      
-      this.loadChatData();
-      this.setupSocketListeners();
     });
+    
+    // Set up socket listeners
+    this.setupSocketListeners();
+  }
+  
+  private async handleDirectMessageFromUrl(userId: string, username: string): Promise<void> {
+    // Switch to direct message tab
+    this.activeTab = 'direct';
+    
+    // Prevent processing if this is the current user (would cause a loop)
+    if (this.currentUser && userId === this.currentUser.id) {
+      console.log('Avoiding self-chat loop');
+      return;
+    }
+    
+    // Check if user is already in direct messages list
+    const existingDM = this.directMessages.find(dm => dm.userId === userId);
+    
+    if (existingDM) {
+      // Select existing chat
+      this.selectDirectMessage(existingDM);
+    } else {
+      // Create a new direct message entry
+      try {
+        const chatUser = await this.chatService.getOrCreateDirectChat(userId);
+        const newDM: DirectMessage = {
+          userId: userId,
+          username: username || chatUser.username,
+          avatar: chatUser.avatar,
+          unreadCount: 0
+        };
+        this.directMessages.push(newDM);
+        this.selectDirectMessage(newDM);
+      } catch (error) {
+        console.error('Error creating direct chat:', error);
+      }
+    }
   }
 
   ngOnDestroy(): void {
@@ -159,11 +213,74 @@ export class ChatComponent implements OnInit, OnDestroy {
         this.onlineUsers = users;
       });
       
+      // Connect to chat socket and join chat
+      this.connectToChat();
+      
     } catch (error) {
       console.error('Error loading chat data:', error);
     } finally {
       this.isLoading = false;
     }
+  }
+  
+  private connectToChat(): void {
+    if (!this.currentUser) return;
+    
+    // Connect to the chat socket
+    this.socketService.connectToChat();
+    
+    // Set up event listeners for chat messages
+    this.setupChatListeners();
+    
+    // Join the chat with current user info
+    this.joinChatWithUserInfo();
+  }
+  
+  private joinChatWithUserInfo(): void {
+    if (!this.currentUser) return;
+    
+    const joinData = {
+      userId: this.currentUser.id,
+      username: this.currentUser.username,
+      avatar: this.currentUser.avatar
+    };
+    
+    console.log('Joining chat with user info:', joinData);
+    
+    // Use the socket service to emit the event
+    this.socketService.connect(
+      parseInt(this.currentUser.id), 
+      this.currentUser.username, 
+      this.currentUser.avatar
+    );
+    
+    // Additional subscription for direct messages from the SocketService
+    this.subscriptions.push(
+      this.socketService.newDirectMessages$.subscribe(message => {
+        if (message && this.selectedDirectMessage &&
+            (message.senderId === this.selectedDirectMessage.userId || 
+             message.receiverId === this.selectedDirectMessage.userId)) {
+          console.log('Adding direct message to UI:', message);
+          this.messages.push(message as unknown as ChatMessage);
+        }
+      })
+    );
+    
+    // Additional subscription for channel messages from the SocketService
+    this.subscriptions.push(
+      this.socketService.newMessages$.subscribe(message => {
+        if (message && this.selectedChannel && 
+            message.channelId === this.selectedChannel.id) {
+          console.log('Adding channel message to UI:', message);
+          this.messages.push(message as unknown as ChatMessage);
+        }
+      })
+    );
+  }
+  
+  private setupChatListeners(): void {
+    // Implement additional listeners if needed
+    console.log('Setting up chat listeners');
   }
 
   private async loadDirectMessages(): Promise<void> {
@@ -236,6 +353,15 @@ export class ChatComponent implements OnInit, OnDestroy {
     await this.loadDirectMessageHistory(dm.userId);
     
     console.log('Selected DM with:', dm.username);
+    
+    // Reset unread count
+    dm.unreadCount = 0;
+    
+    // Join a room for direct messaging
+    if (this.currentUser) {
+      const roomId = `user_${this.currentUser.id}`;
+      console.log(`Joining direct message room: ${roomId}`);
+    }
   }
 
   // Load messages
@@ -282,22 +408,83 @@ export class ChatComponent implements OnInit, OnDestroy {
     if (!this.newMessage.trim() || !this.currentUser) return;
     
     try {
-      const messageData = {
-        content: this.newMessage.trim(),
-        channelId: this.selectedChannel?.id,
-        receiverId: this.selectedDirectMessage?.userId
-      };
-      
       if (this.selectedChannel) {
-        await this.chatService.sendChannelMessage(this.selectedChannel.id, messageData);
+        // Send channel message via socket
+        console.log('Sending channel message');
+        const messageData = {
+          content: this.newMessage.trim(),
+          channelId: this.selectedChannel.id,
+          senderId: this.currentUser.id,
+          senderUsername: this.currentUser.username,
+          senderAvatar: this.currentUser.avatar
+        };
+        
+        // Save message to database via HTTP
+        await this.chatService.sendChannelMessage(this.selectedChannel.id, {
+          content: this.newMessage.trim(),
+          senderId: this.currentUser.id
+        });
+        
+        // Also emit via socket for real-time updates
+        this.socketService.connect(
+          parseInt(this.currentUser.id),
+          this.currentUser.username,
+          this.currentUser.avatar
+        );
+        this.socketService.sendChatMessage({
+          content: this.newMessage.trim(),
+          channelId: parseInt(this.selectedChannel.id),
+          senderId: parseInt(this.currentUser.id),
+          senderUsername: this.currentUser.username,
+          senderAvatar: this.currentUser.avatar
+        });
+        
       } else if (this.selectedDirectMessage) {
-        await this.chatService.sendDirectMessage(this.selectedDirectMessage.userId, messageData);
+        // Send direct message
+        console.log('Sending direct message');
+        const messageData = {
+          content: this.newMessage.trim(),
+          receiverId: this.selectedDirectMessage.userId,
+          senderId: this.currentUser.id,
+          senderUsername: this.currentUser.username,
+          senderAvatar: this.currentUser.avatar
+        };
+        
+        // Save message to database via HTTP
+        await this.chatService.sendDirectMessage(this.selectedDirectMessage.userId, {
+          content: this.newMessage.trim(),
+          senderId: this.currentUser.id
+        });
+        
+        // Also emit via socket for real-time updates
+        this.socketService.connect(
+          parseInt(this.currentUser.id),
+          this.currentUser.username,
+          this.currentUser.avatar
+        );
+        
+        // Emit the direct message event
+        this.socketService.sendDirectMessage(
+          parseInt(this.selectedDirectMessage.userId),
+          this.newMessage.trim()
+        );
+        
+        // Add message to local messages array for immediate UI update
+        this.messages.push({
+          id: `temp-${Date.now()}`,
+          content: this.newMessage.trim(),
+          senderId: this.currentUser.id,
+          senderUsername: this.currentUser.username,
+          senderAvatar: this.currentUser.avatar,
+          messageType: 'TEXT',
+          isEdited: false,
+          createdAt: new Date().toISOString(),
+          reactions: []
+        });
       }
       
       // Clear input
       this.newMessage = '';
-      
-      console.log('Message sent:', messageData);
       
     } catch (error) {
       console.error('Error sending message:', error);
@@ -379,6 +566,51 @@ export class ChatComponent implements OnInit, OnDestroy {
   openChannelModal(): void {
     if (!this.selectedServer) return;
     this.showChannelModal = true;
+  }
+  
+  // Open the friend chat modal
+  async openFriendChatModal(): Promise<void> {
+    // Freundesliste aktualisieren, falls nötig
+    if (this.currentUser && (!this.directMessages || this.directMessages.length === 0)) {
+      await this.loadDirectMessages();
+    }
+    this.showFriendChatModal = true;
+    console.log('Friend chat modal opened with', this.directMessages.length, 'friends');
+  }
+  
+  // Start a direct message with a user
+  async startDirectChat(userId: string, username: string): Promise<void> {
+    if (!this.currentUser || userId === this.currentUser.id) return;
+    
+    try {
+      // Switch to direct message tab
+      this.activeTab = 'direct';
+      
+      // Check if we already have this DM in our list
+      const existingDM = this.directMessages.find(dm => dm.userId === userId);
+      
+      if (existingDM) {
+        // Select existing direct message
+        this.selectDirectMessage(existingDM);
+      } else {
+        // Initialize a new direct chat
+        const chatUser = await this.chatService.getOrCreateDirectChat(userId);
+        
+        // Create new DM entry
+        const newDM: DirectMessage = {
+          userId,
+          username: chatUser.username || username,
+          avatar: chatUser.avatar,
+          unreadCount: 0
+        };
+        
+        // Add to list and select
+        this.directMessages.push(newDM);
+        await this.selectDirectMessage(newDM);
+      }
+    } catch (error) {
+      console.error('Error starting direct chat:', error);
+    }
   }
 
   // Utility methods

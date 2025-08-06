@@ -131,13 +131,23 @@
             </app-button>
           </div>
 
-          <app-button 
-            type="button"
-            variant="danger" 
-            size="medium"
-            (click)="onDeleteAccount()">
-            Konto löschen
-          </app-button>
+          <div class="flex space-x-3">
+            <app-button 
+              type="button"
+              variant="danger" 
+              size="medium"
+              (click)="onDeleteAccount()">
+              Konto löschen
+            </app-button>
+            
+            <app-button 
+              type="button"
+              variant="secondary" 
+              size="medium"
+              (click)="startChat()">
+              💬 Chat starten
+            </app-button>
+          </div>
         </div>
 
       </form>

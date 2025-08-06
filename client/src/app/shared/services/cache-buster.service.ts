@@ -18,15 +18,25 @@ export class CacheBusterService {
   private initializeCacheBusting(): void {
     if (!this.isBrowser) return;
     
-    // Clear cache on app start
-    this.clearAllCaches();
+    // Check if we've already initialized cache busting in this session
+    const hasBustedCache = sessionStorage.getItem('cache_busted');
+    if (hasBustedCache === 'true') {
+      console.log('📝 Cache already busted in this session');
+      return;
+    }
     
-    // Set up periodic cache clearing (every 5 minutes)
+    // Clear cache on app start - only socket caches to avoid reload issues
+    this.clearSocketCaches();
+    
+    // Mark that we've busted the cache in this session
+    sessionStorage.setItem('cache_busted', 'true');
+    
+    // Set up periodic cache clearing (every 5 minutes) - only socket caches
     setInterval(() => {
       this.clearSocketCaches();
     }, 5 * 60 * 1000);
     
-    // Clear cache before page unload
+    // Clear socket cache before page unload
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeunload', () => {
         this.clearSocketCaches();
@@ -37,9 +47,15 @@ export class CacheBusterService {
   public clearAllCaches(): void {
     if (!this.isBrowser) return;
     
+    // Only clear socket caches by default - this is safe and won't cause reloads
     this.clearSocketCaches();
-    this.clearApplicationCache();
-    this.clearBrowserCache();
+    
+    // We won't automatically call these more aggressive cache clearing methods
+    // as they might cause reload loops
+    // this.clearApplicationCache();
+    // this.clearBrowserCache();
+    
+    console.log('🧹 Safe cache clearing completed');
   }
 
   public clearSocketCaches(): void {
@@ -88,12 +104,14 @@ export class CacheBusterService {
     if (!this.isBrowser || typeof window === 'undefined' || typeof performance === 'undefined') return;
     
     try {
-      // Force reload without cache (programmatically)
-      if (performance.navigation && performance.navigation.type === performance.navigation.TYPE_RELOAD) {
-        window.location.reload();
-      }
+      // Safer cache clearing without reloading the page
+      // This prevents infinite reload loops
+      console.log('📝 Browser cache handling without reload');
+      
+      // We'll just log it instead of reloading
+      // Note: Removed the automatic reload that was causing loops
     } catch (error) {
-      console.warn('⚠️ Could not force cache reload:', error);
+      console.warn('⚠️ Could not clear browser cache:', error);
     }
   }
 

@@ -38,12 +38,16 @@ export class Dashboard implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.authService.currentUser$.subscribe(user => {
-      this.currentUser = user;
-      if (!user) {
-        this.router.navigate(['/login']);
-      }
-    });
+    // Instead of subscribing to the Observable which can trigger multiple times,
+    // just check the current authentication state once
+    this.currentUser = this.authService.getCurrentUser();
+    
+    // If not logged in, navigate to login page
+    // Note: The AuthGuard should already prevent this component from loading if not authenticated
+    if (!this.currentUser) {
+      this.router.navigate(['/login']);
+      return;
+    }
   }
 
   logout(): void {

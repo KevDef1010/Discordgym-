@@ -98,6 +98,12 @@ export interface Friend {
   displayId?: string;
 }
 
+export interface DirectChatUser {
+  id: string;
+  username: string;
+  avatar?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -203,6 +209,12 @@ export class ChatService {
   }
 
   // Friends (for direct messages) - this might need to be moved to a separate service
+  
+  // Direct chat initialization
+  async getOrCreateDirectChat(userId: string): Promise<DirectChatUser> {
+    const url = `${this.baseUrl}/direct-chat/${userId}`;
+    return firstValueFrom(this.http.post<DirectChatUser>(url, {}));
+  }
   async getFriends(userId: string): Promise<Friend[]> {
     const url = `http://localhost:3000/friends/list/${userId}`;
     return firstValueFrom(this.http.get<Friend[]>(url));

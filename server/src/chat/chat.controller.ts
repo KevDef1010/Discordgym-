@@ -93,4 +93,14 @@ export class ChatController {
   async getFriends(@Param('userId') userId: string) {
     return this.chatService.getFriends(userId);
   }
+  
+  // Get or create a direct chat with a user
+  @Post('direct-chat/:userId')
+  async getOrCreateDirectChat(
+    @Param('userId') targetUserId: string,
+    @Request() req
+  ) {
+    const currentUserId = req.user.id;
+    return this.chatService.getOrCreateDirectChat(currentUserId, targetUserId);
+  }
 }
