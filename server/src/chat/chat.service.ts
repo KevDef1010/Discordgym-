@@ -304,4 +304,252 @@ export class ChatService {
     // Return the target user info for the chat UI
     return targetUser;
   }
+
+  // ===== SERVER INVITE SYSTEM =====
+
+  // Create server invite
+  async createServerInvite(serverId: string, createdById: string, options: { maxUses?: number; expiresAt?: string }) {
+    // Check if user is server owner or admin
+    const member = await this.prisma.chatServerMember.findFirst({
+      where: {
+        userId: createdById,
+        chatServerId: serverId,
+        role: { in: ['OWNER', 'ADMIN'] }
+      }
+    });
+
+    if (!member) {
+      throw new Error('You do not have permission to create invites for this server');
+    }
+
+    // Generate unique invite code
+    const code = this.generateInviteCode();
+
+    return this.prisma.chatServerInvite.create({
+      data: {
+        code,
+        chatServerId: serverId,
+        createdById,
+        maxUses: options.maxUses,
+        expiresAt: options.expiresAt ? new Date(options.expiresAt) : null,
+      },
+      include: {
+        chatServer: {
+          select: { name: true }
+        },
+        createdBy: {
+          select: { username: true }
+        }
+      }
+    });
+  }
+
+  // Get server invites
+  async getServerInvites(serverId: string, userId: string) {
+    // Check if user is server member
+    const member = await this.prisma.chatServerMember.findFirst({
+      where: {
+        userId,
+        chatServerId: serverId
+      }
+    });
+
+    if (!member) {
+      throw new Error('You are not a member of this server');
+    }
+
+    return this.prisma.chatServerInvite.findMany({
+      where: {
+        chatServerId: serverId,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ]
+      },
+      include: {
+        createdBy: {
+          select: { username: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  // Join server by invite
+  async joinServerByInvite(code: string, userId: string) {
+    const invite = await this.prisma.chatServerInvite.findUnique({
+      where: { code },
+      include: {
+        chatServer: {
+          select: { id: true, name: true }
+        }
+      }
+    });
+
+    if (!invite) {
+      throw new Error('Invalid invite code');
+    }
+
+    // Check if invite is expired
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      throw new Error('This invite has expired');
+    }
+
+    // Check if invite has reached max uses
+    if (invite.maxUses && invite.uses >= invite.maxUses) {
+      throw new Error('This invite has reached its usage limit');
+    }
+
+    // Check if user is already a member
+    const existingMember = await this.prisma.chatServerMember.findFirst({
+      where: {
+        userId,
+        chatServerId: invite.chatServerId
+      }
+    });
+
+    if (existingMember) {
+      throw new Error('You are already a member of this server');
+    }
+
+    // Add user to server and increment invite usage
+    await this.prisma.$transaction([
+      this.prisma.chatServerMember.create({
+        data: {
+          userId,
+          chatServerId: invite.chatServerId,
+          role: 'MEMBER'
+        }
+      }),
+      this.prisma.chatServerInvite.update({
+        where: { id: invite.id },
+        data: { uses: { increment: 1 } }
+      })
+    ]);
+
+    return {
+      success: true,
+      server: invite.chatServer
+    };
+  }
+
+  // Get invite info (public, no auth required)
+  async getInviteInfo(code: string) {
+    const invite = await this.prisma.chatServerInvite.findUnique({
+      where: { code },
+      include: {
+        chatServer: {
+          select: {
+            name: true,
+            description: true,
+            _count: {
+              select: { members: true }
+            }
+          }
+        },
+        createdBy: {
+          select: { username: true }
+        }
+      }
+    });
+
+    if (!invite) {
+      throw new Error('Invalid invite code');
+    }
+
+    // Check if invite is expired
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      throw new Error('This invite has expired');
+    }
+
+    return {
+      code: invite.code,
+      server: invite.chatServer,
+      createdBy: invite.createdBy.username,
+      expiresAt: invite.expiresAt,
+      maxUses: invite.maxUses,
+      uses: invite.uses
+    };
+  }
+
+  // Delete invite
+  async deleteInvite(inviteId: string, userId: string) {
+    const invite = await this.prisma.chatServerInvite.findUnique({
+      where: { id: inviteId },
+      include: {
+        chatServer: {
+          include: {
+            members: {
+              where: { userId },
+              select: { role: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!invite) {
+      throw new Error('Invite not found');
+    }
+
+    // Check if user has permission (creator, server owner, or admin)
+    const userMember = invite.chatServer.members[0];
+    if (invite.createdById !== userId && (!userMember || !['OWNER', 'ADMIN'].includes(userMember.role))) {
+      throw new Error('You do not have permission to delete this invite');
+    }
+
+    await this.prisma.chatServerInvite.delete({
+      where: { id: inviteId }
+    });
+
+    return { success: true };
+  }
+
+  // Get user's received invites (for profile display)
+  async getUserInvites(userId: string) {
+    // For now, return active invites for servers user is not yet a member of
+    // In a more complex system, you might have a separate PendingInvite model
+    const userServerIds = await this.prisma.chatServerMember.findMany({
+      where: { userId },
+      select: { chatServerId: true }
+    });
+
+    const userServerIdList = userServerIds.map(m => m.chatServerId);
+
+    return this.prisma.chatServerInvite.findMany({
+      where: {
+        chatServerId: { notIn: userServerIdList },
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ]
+      },
+      include: {
+        chatServer: {
+          select: {
+            name: true,
+            description: true,
+            _count: {
+              select: { members: true }
+            }
+          }
+        },
+        createdBy: {
+          select: { username: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10 // Limit to recent invites
+    });
+  }
+
+  // Helper method to generate invite codes
+  private generateInviteCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
 }

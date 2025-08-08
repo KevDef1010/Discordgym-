@@ -20,6 +20,10 @@ export class ProfileComponent implements OnInit {
   successMessage = '';
   errorMessage = '';
 
+  // Invites section
+  userInvites: any[] = [];
+  invitesLoading = false;
+
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
@@ -48,6 +52,9 @@ export class ProfileComponent implements OnInit {
       discordId: this.currentUser.discordId,
       avatar: this.currentUser.avatar
     });
+
+    // Load user invites
+    this.loadUserInvites();
   }
 
   onSubmit(): void {
@@ -93,5 +100,36 @@ export class ProfileComponent implements OnInit {
     // Instead of trying to chat with yourself, just navigate to the chat page
     // This prevents the infinite loop issue
     this.router.navigate(['/chat']);
+  }
+
+  loadUserInvites(): void {
+    if (!this.currentUser) return;
+    
+    this.invitesLoading = true;
+    this.chatService.getUserInvites().then((invites: any[]) => {
+      this.userInvites = invites;
+      this.invitesLoading = false;
+    }).catch((error: any) => {
+      console.error('Error loading invites:', error);
+      this.invitesLoading = false;
+    });
+  }
+
+  acceptInvite(inviteCode: string): void {
+    this.chatService.joinServerByInvite(inviteCode).then((response: any) => {
+      this.successMessage = 'Server erfolgreich beigetreten!';
+      this.loadUserInvites(); // Refresh invites
+      // Optionally navigate to the server
+      setTimeout(() => this.successMessage = '', 3000);
+    }).catch((error: any) => {
+      this.errorMessage = 'Fehler beim Beitreten des Servers';
+      setTimeout(() => this.errorMessage = '', 3000);
+    });
+  }
+
+  declineInvite(inviteId: number): void {
+    // For now, just remove from local list
+    // In a full implementation, you might want to mark as declined on server
+    this.userInvites = this.userInvites.filter(invite => invite.id !== inviteId);
   }
 }

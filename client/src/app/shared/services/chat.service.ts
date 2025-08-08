@@ -91,6 +91,47 @@ export interface MessageReaction {
   createdAt: string;
 }
 
+export interface ServerInvite {
+  id: string;
+  code: string;
+  chatServerId: string;
+  createdById: string;
+  expiresAt?: string;
+  maxUses?: number;
+  uses: number;
+  createdAt: string;
+  chatServer?: {
+    name: string;
+    description?: string;
+    _count?: {
+      members: number;
+    };
+  };
+  createdBy?: {
+    username: string;
+  };
+}
+
+export interface CreateInviteDto {
+  maxUses?: number;
+  expiresAt?: string;
+}
+
+export interface InviteInfo {
+  code: string;
+  server: {
+    name: string;
+    description?: string;
+    _count: {
+      members: number;
+    };
+  };
+  createdBy: string;
+  expiresAt?: string;
+  maxUses?: number;
+  uses: number;
+}
+
 export interface Friend {
   id: string;
   username: string;
@@ -325,6 +366,90 @@ export class ChatService {
       async () => {
         const url = `${this.baseUrl}/public/friends/${currentUserId}`;
         return firstValueFrom(this.http.get<Friend[]>(url));
+      }
+    );
+  }
+
+  // ===== SERVER INVITE SYSTEM =====
+
+  async createServerInvite(serverId: string, options: CreateInviteDto = {}): Promise<ServerInvite> {
+    return this.makeAuthenticatedRequest(
+      // Authenticated call
+      async () => {
+        const url = `${this.baseUrl}/servers/${serverId}/invites`;
+        return firstValueFrom(this.http.post<ServerInvite>(url, options));
+      },
+      // Public fallback - not applicable for creating invites
+      async () => {
+        throw new Error('Authentication required to create server invites');
+      }
+    );
+  }
+
+  async getServerInvites(serverId: string): Promise<ServerInvite[]> {
+    return this.makeAuthenticatedRequest(
+      // Authenticated call
+      async () => {
+        const url = `${this.baseUrl}/servers/${serverId}/invites`;
+        return firstValueFrom(this.http.get<ServerInvite[]>(url));
+      },
+      // Public fallback - not applicable
+      async () => {
+        throw new Error('Authentication required to view server invites');
+      }
+    );
+  }
+
+  async getInviteInfo(code: string): Promise<InviteInfo> {
+    // This is always public, no auth needed
+    const url = `${this.baseUrl}/public/invites/${code}`;
+    return firstValueFrom(this.http.get<InviteInfo>(url));
+  }
+
+  async joinServerByInvite(code: string): Promise<{ success: boolean; server: any }> {
+    const currentUserId = this.getCurrentUserId();
+    
+    return this.makeAuthenticatedRequest(
+      // Authenticated call
+      async () => {
+        const url = `${this.baseUrl}/invites/${code}/join`;
+        return firstValueFrom(this.http.post<{ success: boolean; server: any }>(url, {}));
+      },
+      // Public fallback
+      async () => {
+        if (!currentUserId) {
+          throw new Error('User ID required');
+        }
+        const url = `${this.baseUrl}/public/invites/${code}/join`;
+        return firstValueFrom(this.http.post<{ success: boolean; server: any }>(url, { userId: currentUserId }));
+      }
+    );
+  }
+
+  async deleteInvite(inviteId: string): Promise<{ success: boolean }> {
+    return this.makeAuthenticatedRequest(
+      // Authenticated call
+      async () => {
+        const url = `${this.baseUrl}/invites/${inviteId}`;
+        return firstValueFrom(this.http.delete<{ success: boolean }>(url));
+      },
+      // Public fallback - not applicable
+      async () => {
+        throw new Error('Authentication required to delete invites');
+      }
+    );
+  }
+
+  async getUserInvites(): Promise<ServerInvite[]> {
+    return this.makeAuthenticatedRequest(
+      // Authenticated call
+      async () => {
+        const url = `${this.baseUrl}/user/invites`;
+        return firstValueFrom(this.http.get<ServerInvite[]>(url));
+      },
+      // Public fallback - not applicable
+      async () => {
+        return []; // Return empty array for public users
       }
     );
   }

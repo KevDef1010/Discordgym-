@@ -97,6 +97,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   showServerModal = false;
   showChannelModal = false;
   showFriendChatModal = false;
+  showInviteModal = false;
   
   // New server/channel form data
   newServerName = '';
@@ -105,6 +106,12 @@ export class ChatComponent implements OnInit, OnDestroy {
   newChannelName = '';
   newChannelDescription = '';
   newChannelPrivate = false;
+
+  // Invite system
+  serverInvites: any[] = [];
+  newInviteMaxUses?: number;
+  newInviteExpiresHours?: number;
+  createdInviteCode = '';
   
   // Pagination and infinite scroll
   messageLimit = 20; // Messages per page
@@ -786,6 +793,72 @@ export class ChatComponent implements OnInit, OnDestroy {
     }
     // Otherwise show the username or fallback
     return username || 'Unknown User';
+  }
+
+  // ===== SERVER INVITE SYSTEM =====
+
+  openInviteModal(): void {
+    if (!this.selectedServer) return;
+    this.showInviteModal = true;
+    this.loadServerInvites();
+  }
+
+  async loadServerInvites(): Promise<void> {
+    if (!this.selectedServer) return;
+    
+    try {
+      this.serverInvites = await this.chatService.getServerInvites(this.selectedServer.id);
+    } catch (error) {
+      console.error('Error loading server invites:', error);
+    }
+  }
+
+  async createInvite(): Promise<void> {
+    if (!this.selectedServer) return;
+
+    try {
+      const options: any = {};
+      if (this.newInviteMaxUses) {
+        options.maxUses = this.newInviteMaxUses;
+      }
+      if (this.newInviteExpiresHours) {
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + this.newInviteExpiresHours);
+        options.expiresAt = expiresAt.toISOString();
+      }
+
+      const invite = await this.chatService.createServerInvite(this.selectedServer.id, options);
+      this.createdInviteCode = invite.code;
+      this.serverInvites.unshift(invite);
+      
+      // Reset form
+      this.newInviteMaxUses = undefined;
+      this.newInviteExpiresHours = undefined;
+    } catch (error) {
+      console.error('Error creating invite:', error);
+    }
+  }
+
+  async deleteInvite(inviteId: string): Promise<void> {
+    try {
+      await this.chatService.deleteInvite(inviteId);
+      this.serverInvites = this.serverInvites.filter(invite => invite.id !== inviteId);
+    } catch (error) {
+      console.error('Error deleting invite:', error);
+    }
+  }
+
+  copyInviteLink(code: string): void {
+    const inviteUrl = `${window.location.origin}/invite/${code}`;
+    navigator.clipboard.writeText(inviteUrl).then(() => {
+      console.log('Invite link copied to clipboard');
+    }).catch(err => {
+      console.error('Error copying to clipboard:', err);
+    });
+  }
+
+  formatExpiryDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('de-DE');
   }
 
   private leaveCurrentRoom(): void {

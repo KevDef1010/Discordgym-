@@ -153,6 +153,61 @@
       </form>
     </div>
 
+    <!-- Server Invitations Section -->
+    <div class="bg-white shadow rounded-lg mt-6">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-900">Server-Einladungen</h2>
+        <p class="text-gray-600">Verwaltung Ihrer empfangenen Server-Einladungen</p>
+      </div>
+      
+      <div class="px-6 py-4">
+        <div *ngIf="invitesLoading" class="text-center py-4">
+          <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+          <span class="ml-2 text-gray-600">Einladungen werden geladen...</span>
+        </div>
+
+        <div *ngIf="!invitesLoading && userInvites.length === 0" class="text-center py-8 text-gray-500">
+          <div class="text-4xl mb-2">📨</div>
+          <p>Keine Server-Einladungen vorhanden</p>
+          <p class="text-sm">Sie erhalten hier Benachrichtigungen über neue Server-Einladungen</p>
+        </div>
+
+        <div *ngIf="!invitesLoading && userInvites.length > 0" class="space-y-4">
+          <div *ngFor="let invite of userInvites" 
+               class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+            
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <h3 class="font-medium text-gray-900">{{ invite.chatServer?.name || 'Unbekannter Server' }}</h3>
+                <p class="text-sm text-gray-600 mt-1">
+                  Eingeladen von: {{ invite.invitedBy?.username || 'Unbekannt' }}
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                  Einladungscode: {{ invite.code }}
+                </p>
+                <p class="text-xs text-gray-500">
+                  Läuft ab: {{ invite.expiresAt | date:'dd.MM.yyyy HH:mm' }}
+                </p>
+              </div>
+              
+              <div class="flex space-x-2 ml-4">
+                <button 
+                  (click)="acceptInvite(invite.code)"
+                  class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                  Beitreten
+                </button>
+                <button 
+                  (click)="declineInvite(invite.id)"
+                  class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                  Ablehnen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Additional Info -->
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
       <div class="flex items-start">

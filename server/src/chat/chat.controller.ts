@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
 
@@ -106,6 +106,51 @@ export class ChatController {
   ) {
     return this.chatService.getOrCreateDirectChat(req.user.id, targetUserId);
   }
+
+  // Server Invite System
+  @Post('servers/:serverId/invites')
+  async createInvite(
+    @Param('serverId') serverId: string,
+    @Body() createInviteDto: { maxUses?: number; expiresAt?: string },
+    @Request() req,
+  ) {
+    return this.chatService.createServerInvite(serverId, req.user.id, createInviteDto);
+  }
+
+  @Get('servers/:serverId/invites')
+  async getServerInvites(
+    @Param('serverId') serverId: string,
+    @Request() req,
+  ) {
+    return this.chatService.getServerInvites(serverId, req.user.id);
+  }
+
+  @Post('invites/:code/join')
+  async joinServerByInvite(
+    @Param('code') code: string,
+    @Request() req,
+  ) {
+    return this.chatService.joinServerByInvite(code, req.user.id);
+  }
+
+  @Get('invites/:code')
+  async getInviteInfo(@Param('code') code: string) {
+    return this.chatService.getInviteInfo(code);
+  }
+
+  @Delete('invites/:inviteId')
+  async deleteInvite(
+    @Param('inviteId') inviteId: string,
+    @Request() req,
+  ) {
+    return this.chatService.deleteInvite(inviteId, req.user.id);
+  }
+
+  // Get user's pending invites
+  @Get('user/invites')
+  async getUserInvites(@Request() req) {
+    return this.chatService.getUserInvites(req.user.id);
+  }
 }
 
 // Temporary controller for testing without auth
@@ -154,5 +199,19 @@ export class PublicChatController {
       senderId: sendMessageDto.senderId,
       receiverId: friendId,
     });
+  }
+
+  // Public invite endpoints for testing
+  @Get('invites/:code')
+  async getInviteInfo(@Param('code') code: string) {
+    return this.chatService.getInviteInfo(code);
+  }
+
+  @Post('invites/:code/join')
+  async joinServerByInvite(
+    @Param('code') code: string,
+    @Body() body: { userId: string },
+  ) {
+    return this.chatService.joinServerByInvite(code, body.userId);
   }
 }
