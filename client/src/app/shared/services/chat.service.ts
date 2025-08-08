@@ -162,21 +162,26 @@ export class ChatService {
     return firstValueFrom(this.http.get<ChatMessage[]>(url));
   }
 
-  async getDirectMessages(friendId: string): Promise<ChatMessage[]> {
+  async getDirectMessages(friendId: string, limit?: number, skip?: number): Promise<ChatMessage[]> {
     const currentUserId = this.getCurrentUserId();
     if (!currentUserId) {
       throw new Error('User not authenticated');
     }
 
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (skip) params.append('skip', skip.toString());
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+
     return this.makeAuthenticatedRequest(
       // Authenticated call
       async () => {
-        const url = `${this.baseUrl}/direct/${currentUserId}/${friendId}/messages`;
+        const url = `${this.baseUrl}/direct/${currentUserId}/${friendId}/messages${queryString}`;
         return firstValueFrom(this.http.get<ChatMessage[]>(url));
       },
       // Public fallback
       async () => {
-        const url = `${this.baseUrl}/public/direct/${currentUserId}/${friendId}/messages`;
+        const url = `${this.baseUrl}/public/direct/${currentUserId}/${friendId}/messages${queryString}`;
         return firstValueFrom(this.http.get<ChatMessage[]>(url));
       }
     );

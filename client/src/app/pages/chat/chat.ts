@@ -106,6 +106,12 @@ export class ChatComponent implements OnInit, OnDestroy {
   newChannelDescription = '';
   newChannelPrivate = false;
   
+  // Pagination and infinite scroll
+  messageLimit = 20; // Messages per page
+  currentPage = 0;
+  hasMoreMessages = true;
+  isLoadingMoreMessages = false;
+  
   // Subscriptions
   private subscriptions: Subscription[] = [];
   private typingTimeout: any;
@@ -386,8 +392,8 @@ export class ChatComponent implements OnInit, OnDestroy {
         ...msg,
         sender: {
           id: msg.senderId,
-          username: msg.senderUsername || 'Unknown User',
-          avatar: msg.senderAvatar
+          username: msg.senderUsername || msg.sender?.username,
+          avatar: msg.senderAvatar || msg.sender?.avatar
         }
       }));
     } catch (error) {
@@ -397,25 +403,51 @@ export class ChatComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async loadDirectMessageHistory(friendId: string): Promise<void> {
+  private async loadDirectMessageHistory(friendId: string, loadMore: boolean = false): Promise<void> {
     try {
-      console.log('📜 Loading message history for friend:', friendId);
-      this.isLoading = true;
-      const messages = await this.chatService.getDirectMessages(friendId);
+      console.log('📜 Loading message history for friend:', friendId, 'loadMore:', loadMore);
+      
+      if (!loadMore) {
+        this.isLoading = true;
+        this.currentPage = 0;
+        this.hasMoreMessages = true;
+      } else {
+        this.isLoadingMoreMessages = true;
+      }
+
+      // Calculate skip based on pagination
+      const skip = this.currentPage * this.messageLimit;
+      
+      const messages = await this.chatService.getDirectMessages(friendId, this.messageLimit, skip);
       console.log('💌 Messages received:', messages);
-      this.messages = (messages as any[]).map(msg => ({
+      
+      const processedMessages = (messages as any[]).map(msg => ({
         ...msg,
         sender: {
           id: msg.senderId,
-          username: msg.senderUsername || 'Unknown User',
-          avatar: msg.senderAvatar
+          username: msg.senderUsername || msg.sender?.username,
+          avatar: msg.senderAvatar || msg.sender?.avatar
         }
       }));
+
+      if (loadMore) {
+        // Prepend older messages to the beginning of the array
+        this.messages = [...processedMessages, ...this.messages];
+      } else {
+        // Replace messages for initial load
+        this.messages = processedMessages;
+      }
+
+      // Check if there are more messages to load
+      this.hasMoreMessages = messages.length === this.messageLimit;
+      this.currentPage++;
+      
       console.log('📋 Processed messages:', this.messages);
     } catch (error) {
       console.error('❌ Error loading direct messages:', error);
     } finally {
       this.isLoading = false;
+      this.isLoadingMoreMessages = false;
     }
   }
 
@@ -486,17 +518,24 @@ export class ChatComponent implements OnInit, OnDestroy {
         );
         
         // Add message to local messages array for immediate UI update
-        this.messages.push({
+        const localMessage = {
           id: `temp-${Date.now()}`,
           content: this.newMessage.trim(),
           senderId: this.currentUser.id,
           senderUsername: this.currentUser.username,
           senderAvatar: this.currentUser.avatar,
-          messageType: 'TEXT',
+          messageType: 'TEXT' as const,
           isEdited: false,
           createdAt: new Date().toISOString(),
-          reactions: []
-        });
+          reactions: [],
+          sender: {
+            id: this.currentUser.id,
+            username: this.currentUser.username,
+            avatar: this.currentUser.avatar
+          }
+        };
+        this.messages.push(localMessage);
+        console.log('💬 Added local message:', localMessage);
       }
       
       // Clear input
@@ -711,6 +750,19 @@ export class ChatComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Load more messages when scrolling to top
+  async onScroll(event: any): Promise<void> {
+    const element = event.target;
+    const threshold = 100; // Pixels from top to trigger load
+    
+    if (element.scrollTop <= threshold && this.hasMoreMessages && !this.isLoadingMoreMessages) {
+      const selectedUserId = this.selectedDirectMessage?.userId;
+      if (selectedUserId) {
+        await this.loadDirectMessageHistory(selectedUserId, true);
+      }
+    }
+  }
+
   getTypingText(): string {
     if (this.typingUsers.length === 0) return '';
     if (this.typingUsers.length === 1) return `${this.typingUsers[0]} tippt...`;
@@ -724,6 +776,16 @@ export class ChatComponent implements OnInit, OnDestroy {
       event.preventDefault();
       this.sendMessage();
     }
+  }
+
+  // Get display name for message sender
+  getDisplayName(username: string | undefined, senderId: string): string {
+    // If it's the current user's message, show "Ich"
+    if (this.currentUser && senderId === this.currentUser.id) {
+      return 'Ich';
+    }
+    // Otherwise show the username or fallback
+    return username || 'Unknown User';
   }
 
   private leaveCurrentRoom(): void {

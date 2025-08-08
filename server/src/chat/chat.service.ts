@@ -115,8 +115,8 @@ export class ChatService {
   }
 
   // Get direct messages
-  async getDirectMessages(userId: string, friendId: string) {
-    return this.prisma.chatMessage.findMany({
+  async getDirectMessages(userId: string, friendId: string, limit?: number, skip?: number) {
+    const messages = await this.prisma.chatMessage.findMany({
       where: {
         OR: [
           { senderId: userId, receiverId: friendId },
@@ -142,10 +142,14 @@ export class ChatService {
         }
       },
       orderBy: {
-        createdAt: 'asc'
+        createdAt: 'desc' // Get newest first for pagination
       },
-      take: 50
+      take: limit || 20, // Default 20 messages
+      skip: skip || 0
     });
+
+    // Reverse to show oldest first in UI
+    return messages.reverse();
   }
 
   // Send channel message

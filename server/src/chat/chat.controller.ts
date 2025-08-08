@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
 
@@ -69,9 +69,13 @@ export class ChatController {
   @Get('direct/:userId/:friendId/messages')
   async getDirectMessages(
     @Param('userId') userId: string,
-    @Param('friendId') friendId: string
+    @Param('friendId') friendId: string,
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string
   ) {
-    return this.chatService.getDirectMessages(userId, friendId);
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    const skipNum = skip ? parseInt(skip, 10) : undefined;
+    return this.chatService.getDirectMessages(userId, friendId, limitNum, skipNum);
   }
 
   // Send direct message
@@ -131,8 +135,12 @@ export class PublicChatController {
   async getDirectMessages(
     @Param('userId') userId: string,
     @Param('friendId') friendId: string,
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string
   ) {
-    return this.chatService.getDirectMessages(userId, friendId);
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    const skipNum = skip ? parseInt(skip, 10) : undefined;
+    return this.chatService.getDirectMessages(userId, friendId, limitNum, skipNum);
   }
 
   // Send direct message (public endpoint for testing)

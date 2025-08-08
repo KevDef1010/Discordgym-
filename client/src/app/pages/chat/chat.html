@@ -244,9 +244,20 @@
     </div>
 
     <!-- Messages Area -->
-    <div class="flex-1 overflow-y-auto p-4 space-y-4" *ngIf="selectedChannel || selectedDirectMessage; else noChatSelected">
+    <div 
+      class="flex-1 overflow-y-auto p-4 space-y-4" 
+      *ngIf="selectedChannel || selectedDirectMessage; else noChatSelected"
+      (scroll)="onScroll($event)"
+      #messagesContainer
+    >
       
-      <!-- Loading -->
+      <!-- Loading More Messages Indicator -->
+      <div *ngIf="isLoadingMoreMessages" class="flex justify-center py-2">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
+        <span class="ml-2 text-sm text-gray-400">Ältere Nachrichten laden...</span>
+      </div>
+      
+      <!-- Initial Loading -->
       <div *ngIf="isLoading" class="flex justify-center py-8">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
       </div>
@@ -260,7 +271,7 @@
         >
         <div class="flex-1">
           <div class="flex items-center space-x-2 mb-1">
-            <span class="font-semibold text-white">{{ message.sender?.username || 'Unknown User' }}</span>
+            <span class="font-semibold text-white">{{ getDisplayName(message.sender?.username, message.senderId) }}</span>
             <span class="text-xs text-gray-400">{{ formatTime(message.createdAt) }}</span>
             <span *ngIf="message.isEdited" class="text-xs text-gray-500">(bearbeitet)</span>
           </div>
