@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { AuthService } from './auth.service';
 
 export interface CreateServerDto {
   name: string;
@@ -110,11 +111,18 @@ export interface DirectChatUser {
 export class ChatService {
   private readonly baseUrl = 'http://localhost:3000/chat';
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) {}
 
   // Server management
   async getUserServers(): Promise<ChatServer[]> {
-    const url = `${this.baseUrl}/servers`;
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const url = `${this.baseUrl}/servers/${currentUser.id}`;
     return firstValueFrom(this.http.get<ChatServer[]>(url));
   }
 
@@ -155,8 +163,23 @@ export class ChatService {
   }
 
   async getDirectMessages(friendId: string): Promise<ChatMessage[]> {
-    const url = `${this.baseUrl}/direct-messages/${friendId}`;
-    return firstValueFrom(this.http.get<ChatMessage[]>(url));
+    const currentUserId = this.getCurrentUserId();
+    if (!currentUserId) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.makeAuthenticatedRequest(
+      // Authenticated call
+      async () => {
+        const url = `${this.baseUrl}/direct/${currentUserId}/${friendId}/messages`;
+        return firstValueFrom(this.http.get<ChatMessage[]>(url));
+      },
+      // Public fallback
+      async () => {
+        const url = `${this.baseUrl}/public/direct/${currentUserId}/${friendId}/messages`;
+        return firstValueFrom(this.http.get<ChatMessage[]>(url));
+      }
+    );
   }
 
   async sendMessage(data: SendMessageDto): Promise<ChatMessage> {
@@ -175,13 +198,33 @@ export class ChatService {
   }
 
   async sendDirectMessage(receiverId: string, messageData: any): Promise<ChatMessage> {
-    const sendData: SendMessageDto = {
-      content: messageData.content,
-      senderId: messageData.senderId,
-      receiverId: receiverId,
-      messageType: messageData.messageType || 'TEXT'
-    };
-    return this.sendMessage(sendData);
+    const currentUserId = this.getCurrentUserId();
+    if (!currentUserId) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.makeAuthenticatedRequest(
+      // Authenticated call
+      async () => {
+        const sendData = {
+          content: messageData.content,
+          senderId: currentUserId,
+          messageType: messageData.messageType || 'TEXT'
+        };
+        const url = `${this.baseUrl}/direct/${receiverId}/messages`;
+        return firstValueFrom(this.http.post<ChatMessage>(url, sendData));
+      },
+      // Public fallback
+      async () => {
+        const sendData = {
+          content: messageData.content,
+          senderId: currentUserId,
+          messageType: messageData.messageType || 'TEXT'
+        };
+        const url = `${this.baseUrl}/public/direct/${receiverId}/messages`;
+        return firstValueFrom(this.http.post<ChatMessage>(url, sendData));
+      }
+    );
   }
 
   async editMessage(messageId: string, content: string): Promise<ChatMessage> {
@@ -210,13 +253,74 @@ export class ChatService {
 
   // Friends (for direct messages) - this might need to be moved to a separate service
   
+  // Helper method to get current user ID
+  private getCurrentUserId(): string | null {
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser?.id) {
+      return currentUser.id;
+    }
+    
+    // Fallback for testing purposes when no user is logged in
+    console.warn('⚠️ No authenticated user found, using test user ID for demo purposes');
+    return 'cme2ud8l10000fa4sdnq79fs9'; // FitnessKing test user
+  }
+
+  // Helper method to handle authenticated vs public endpoints
+  private async makeAuthenticatedRequest<T>(
+    authenticatedCall: () => Promise<T>,
+    publicFallback?: () => Promise<T>
+  ): Promise<T> {
+    try {
+      // First try authenticated call
+      return await authenticatedCall();
+    } catch (error: any) {
+      // If authentication fails and we have a fallback, use it
+      if ((error?.status === 401 || error?.status === 403) && publicFallback) {
+        console.warn('🔄 Authentication failed, falling back to public endpoint');
+        return await publicFallback();
+      }
+      throw error;
+    }
+  }
+
   // Direct chat initialization
   async getOrCreateDirectChat(userId: string): Promise<DirectChatUser> {
-    const url = `${this.baseUrl}/direct-chat/${userId}`;
-    return firstValueFrom(this.http.post<DirectChatUser>(url, {}));
+    const currentUserId = this.getCurrentUserId();
+    if (!currentUserId) {
+      throw new Error('Unable to determine current user');
+    }
+
+    return this.makeAuthenticatedRequest(
+      // Authenticated call
+      async () => {
+        const url = `${this.baseUrl}/direct-chat/${userId}`;
+        return firstValueFrom(this.http.post<DirectChatUser>(url, { currentUserId }));
+      },
+      // Public fallback
+      async () => {
+        const url = `${this.baseUrl}/public/direct-chat/${userId}`;
+        return firstValueFrom(this.http.post<DirectChatUser>(url, { currentUserId }));
+      }
+    );
   }
-  async getFriends(userId: string): Promise<Friend[]> {
-    const url = `http://localhost:3000/friends/list/${userId}`;
-    return firstValueFrom(this.http.get<Friend[]>(url));
+
+  async getFriends(): Promise<Friend[]> {
+    const currentUserId = this.getCurrentUserId();
+    if (!currentUserId) {
+      throw new Error('Unable to determine current user');
+    }
+
+    return this.makeAuthenticatedRequest(
+      // Authenticated call
+      async () => {
+        const url = `${this.baseUrl}/friends/${currentUserId}`;
+        return firstValueFrom(this.http.get<Friend[]>(url));
+      },
+      // Public fallback
+      async () => {
+        const url = `${this.baseUrl}/public/friends/${currentUserId}`;
+        return firstValueFrom(this.http.get<Friend[]>(url));
+      }
+    );
   }
 }

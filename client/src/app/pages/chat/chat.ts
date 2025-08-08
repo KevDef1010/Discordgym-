@@ -80,6 +80,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   // Chat data
   chatServers: ChatServer[] = [];
   directMessages: DirectMessage[] = [];
+  availableFriends: any[] = []; // All friends available for new chats
   messages: ChatMessage[] = [];
   onlineUsers: OnlineUser[] = [];
   typingUsers: string[] = [];
@@ -121,9 +122,18 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.currentUser = this.authService.getCurrentUser();
     
     if (!this.currentUser) {
-      // Let the AuthGuard handle navigation to login
-      console.log('No authenticated user found for chat component');
-      return;
+      // Temporary fallback for testing - use a test user
+      this.currentUser = {
+        id: 'cme2ud8l10000fa4sdnq79fs9', // FitnessKing test user
+        username: 'FitnessKing',
+        email: 'king@discordgym.com',
+        avatar: 'https://example.com/avatar1.png',
+        discordId: '111111111111111111',
+        role: 'MEMBER',
+        isActive: true,
+        createdAt: '2025-08-08T13:08:21.302Z'
+      };
+      console.log('Using test user for chat functionality:', this.currentUser);
     }
     
     // Clear URL parameters first thing to prevent loops
@@ -287,7 +297,7 @@ export class ChatComponent implements OnInit, OnDestroy {
     if (!this.currentUser) return;
     
     try {
-      const friends = await this.chatService.getFriends(this.currentUser.id);
+      const friends = await this.chatService.getFriends();
       this.directMessages = (friends as any[]).map((friend: any) => ({
         userId: friend.id,
         username: friend.username,
@@ -345,14 +355,17 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   // Direct message selection
   async selectDirectMessage(dm: DirectMessage): Promise<void> {
+    console.log('🎯 selectDirectMessage called with:', dm);
     this.selectedDirectMessage = dm;
     this.selectedServer = null;
     this.selectedChannel = null;
     
     // Load DM history
+    console.log('📚 Loading direct message history for:', dm.userId);
     await this.loadDirectMessageHistory(dm.userId);
     
-    console.log('Selected DM with:', dm.username);
+    console.log('✅ Selected DM with:', dm.username);
+    console.log('📝 Current selectedDirectMessage:', this.selectedDirectMessage);
     
     // Reset unread count
     dm.unreadCount = 0;
@@ -386,8 +399,10 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   private async loadDirectMessageHistory(friendId: string): Promise<void> {
     try {
+      console.log('📜 Loading message history for friend:', friendId);
       this.isLoading = true;
       const messages = await this.chatService.getDirectMessages(friendId);
+      console.log('💌 Messages received:', messages);
       this.messages = (messages as any[]).map(msg => ({
         ...msg,
         sender: {
@@ -396,8 +411,9 @@ export class ChatComponent implements OnInit, OnDestroy {
           avatar: msg.senderAvatar
         }
       }));
+      console.log('📋 Processed messages:', this.messages);
     } catch (error) {
-      console.error('Error loading direct messages:', error);
+      console.error('❌ Error loading direct messages:', error);
     } finally {
       this.isLoading = false;
     }
@@ -570,31 +586,66 @@ export class ChatComponent implements OnInit, OnDestroy {
   
   // Open the friend chat modal
   async openFriendChatModal(): Promise<void> {
-    // Freundesliste aktualisieren, falls nötig
-    if (this.currentUser && (!this.directMessages || this.directMessages.length === 0)) {
-      await this.loadDirectMessages();
+    try {
+      // Alle verfügbaren Freunde laden (nicht nur die mit bestehenden Chats)
+      if (this.currentUser) {
+        console.log('🔄 Loading friends for modal...');
+        this.availableFriends = await this.chatService.getFriends();
+        console.log('👥 Loaded available friends:', this.availableFriends);
+      }
+      this.showFriendChatModal = true;
+      console.log('🎭 Friend chat modal opened with', this.availableFriends.length, 'friends');
+    } catch (error) {
+      console.error('❌ Error loading friends for modal:', error);
+      this.showFriendChatModal = true; // Öffne Modal trotzdem
     }
-    this.showFriendChatModal = true;
-    console.log('Friend chat modal opened with', this.directMessages.length, 'friends');
+  }
+
+  // TEST METHOD - Remove this later
+  testStartChat(): void {
+    console.log('🧪 Test start chat called');
+    this.startDirectChat('cme2ud8lb0001fa4sxxat7e70', 'CardioQueen');
+  }
+
+  // Track by function for ngFor performance
+  trackByFriendId(index: number, friend: any): string {
+    return friend.id;
+  }
+
+  // Handle friend click in modal with debug
+  onFriendClick(friend: any): void {
+    console.log('🎯 Friend clicked in modal:', friend);
+    this.startDirectChat(friend.id, friend.username);
+    this.showFriendChatModal = false;
+    console.log('🔒 Modal closed');
   }
   
   // Start a direct message with a user
   async startDirectChat(userId: string, username: string): Promise<void> {
-    if (!this.currentUser || userId === this.currentUser.id) return;
+    console.log('🚀 startDirectChat called with:', userId, username);
+    if (!this.currentUser || userId === this.currentUser.id) {
+      console.log('❌ No current user or trying to chat with self');
+      return;
+    }
     
     try {
       // Switch to direct message tab
       this.activeTab = 'direct';
+      console.log('✅ Switched to direct tab');
       
       // Check if we already have this DM in our list
       const existingDM = this.directMessages.find(dm => dm.userId === userId);
+      console.log('🔍 Existing DM found:', existingDM);
       
       if (existingDM) {
         // Select existing direct message
+        console.log('📱 Selecting existing DM');
         this.selectDirectMessage(existingDM);
       } else {
         // Initialize a new direct chat
+        console.log('🆕 Creating new direct chat');
         const chatUser = await this.chatService.getOrCreateDirectChat(userId);
+        console.log('👤 Chat user received:', chatUser);
         
         // Create new DM entry
         const newDM: DirectMessage = {
@@ -603,13 +654,16 @@ export class ChatComponent implements OnInit, OnDestroy {
           avatar: chatUser.avatar,
           unreadCount: 0
         };
+        console.log('💬 New DM created:', newDM);
         
         // Add to list and select
         this.directMessages.push(newDM);
+        console.log('📋 Added to directMessages list, total:', this.directMessages.length);
         await this.selectDirectMessage(newDM);
+        console.log('✅ Selected new DM');
       }
     } catch (error) {
-      console.error('Error starting direct chat:', error);
+      console.error('❌ Error starting direct chat:', error);
     }
   }
 

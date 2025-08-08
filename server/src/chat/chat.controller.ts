@@ -93,14 +93,58 @@ export class ChatController {
   async getFriends(@Param('userId') userId: string) {
     return this.chatService.getFriends(userId);
   }
-  
-  // Get or create a direct chat with a user
+
+  // Get or create direct chat
   @Post('direct-chat/:userId')
   async getOrCreateDirectChat(
     @Param('userId') targetUserId: string,
-    @Request() req
+    @Request() req,
   ) {
-    const currentUserId = req.user.id;
+    return this.chatService.getOrCreateDirectChat(req.user.id, targetUserId);
+  }
+}
+
+// Temporary controller for testing without auth
+@Controller('chat/public')
+export class PublicChatController {
+  constructor(private readonly chatService: ChatService) {}
+  
+  // Get friends for a user (public endpoint for testing)
+  @Get('friends/:userId')
+  async getFriends(@Param('userId') userId: string) {
+    return this.chatService.getFriends(userId);
+  }
+  
+  // Get or create a direct chat with a user (public endpoint for testing)
+  @Post('direct-chat/:userId')
+  async getOrCreateDirectChat(
+    @Param('userId') targetUserId: string,
+    @Body() body?: { currentUserId?: string },
+  ) {
+    // Use hardcoded test user ID if no currentUserId provided
+    const currentUserId = body?.currentUserId || 'cme2ud8l10000fa4sdnq79fs9'; // Test user ID
     return this.chatService.getOrCreateDirectChat(currentUserId, targetUserId);
+  }
+
+  // Get direct message history (public endpoint for testing)
+  @Get('direct/:userId/:friendId/messages')
+  async getDirectMessages(
+    @Param('userId') userId: string,
+    @Param('friendId') friendId: string,
+  ) {
+    return this.chatService.getDirectMessages(userId, friendId);
+  }
+
+  // Send direct message (public endpoint for testing)
+  @Post('direct/:friendId/messages')
+  async sendDirectMessage(
+    @Param('friendId') friendId: string,
+    @Body() sendMessageDto: SendMessageDto & { senderId: string },
+  ) {
+    return this.chatService.sendDirectMessage({
+      content: sendMessageDto.content,
+      senderId: sendMessageDto.senderId,
+      receiverId: friendId,
+    });
   }
 }

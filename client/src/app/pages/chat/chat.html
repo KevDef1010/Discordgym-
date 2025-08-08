@@ -33,15 +33,24 @@
           <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">
             Direktnachrichten
           </h3>
-          <button 
-            (click)="openFriendChatModal()"
-            class="text-purple-400 hover:text-purple-300 transition-colors"
-            title="Chat mit Freund starten"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-          </button>
+          <div class="flex space-x-2">
+            <button 
+              (click)="testStartChat()"
+              class="text-green-400 hover:text-green-300 transition-colors text-xs"
+              title="Test Chat"
+            >
+              TEST
+            </button>
+            <button 
+              (click)="openFriendChatModal()"
+              class="text-purple-400 hover:text-purple-300 transition-colors"
+              title="Chat mit Freund starten"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+            </button>
+          </div>
         </div>
         
         <!-- Direct Messages List -->
@@ -452,16 +461,21 @@
       <div>
         <label class="block text-sm font-medium text-gray-300 mb-2">Freund auswählen</label>
         <div class="space-y-2 max-h-60 overflow-y-auto">
+          <!-- Debug Info -->
+          <div class="text-yellow-400 p-2 text-xs border border-yellow-600 rounded">
+            Debug: {{availableFriends.length}} Freunde geladen
+          </div>
+          
           <!-- Keine Freunde Meldung -->
-          <div *ngIf="directMessages.length === 0" class="text-gray-400 p-2 text-center">
-            Keine Freunde gefunden.
+          <div *ngIf="availableFriends.length === 0" class="text-gray-400 p-2 text-center">
+            Keine Freunde gefunden. Füge erst Freunde hinzu!
           </div>
           
           <!-- Dynamische Freundesliste -->
           <div 
-            *ngFor="let friend of directMessages"
+            *ngFor="let friend of availableFriends"
             class="flex items-center p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors"
-            (click)="startDirectChat(friend.userId, friend.username); showFriendChatModal = false;"
+            (click)="onFriendClick(friend)"
           >
             <div *ngIf="friend.avatar; else avatarPlaceholder" class="w-10 h-10 rounded-full mr-3">
               <img [src]="friend.avatar" class="w-10 h-10 rounded-full object-cover" alt="{{friend.username}}">
@@ -473,7 +487,7 @@
             </ng-template>
             <span class="text-white">{{friend.username}}</span>
             <div class="ml-auto flex items-center">
-              <div [class]="'w-2 h-2 rounded-full ' + getStatusColor(getUserStatus(friend.userId))"></div>
+              <div [class]="'w-2 h-2 rounded-full ' + getStatusColor(getUserStatus(friend.id))"></div>
             </div>
           </div>
         </div>
