@@ -1,6 +1,16 @@
-import { Controller, Post, Body, Get, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Query,
+  Delete,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -23,5 +33,11 @@ export class AuthController {
     @Query('discordId') discordId: string,
   ) {
     return await this.authService.checkUserExists(email, username, discordId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('account')
+  async deleteAccount(@Request() req: any) {
+    return await this.authService.deleteAccount(req.user.id as string);
   }
 }

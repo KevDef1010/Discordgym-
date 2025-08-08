@@ -191,4 +191,19 @@ export class AuthService {
       params: { email, username, discordId }
     });
   }
+
+  deleteAccount(): Observable<any> {
+    const token = isPlatformBrowser(this.platformId) ? localStorage.getItem('authToken') : null;
+    const options = token ? { 
+      headers: { Authorization: `Bearer ${token}` }
+    } : {};
+    
+    return this.http.delete(`${this.API_URL}/auth/account`, options)
+      .pipe(
+        tap(() => {
+          // After successful deletion, clear all local data and log out
+          this.logout();
+        })
+      );
+  }
 }

@@ -1,0 +1,25 @@
+# ===================================
+# Prisma Studio Dockerfile
+# ===================================
+
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy Prisma schema
+COPY prisma ./prisma
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Expose Prisma Studio port
+EXPOSE 5555
+
+# Start Prisma Studio
+CMD ["npx", "prisma", "studio", "--hostname", "0.0.0.0"]

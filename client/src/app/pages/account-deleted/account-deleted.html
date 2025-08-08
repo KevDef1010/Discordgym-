@@ -1,0 +1,41 @@
+<div class="account-deleted-container">
+  <div class="content-wrapper">
+    <div class="success-icon">
+      <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+        <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+        <path class="checkmark-check" fill="none" d="m14.1 27.2l7.1 7.2 16.7-16.8"/>
+      </svg>
+    </div>
+
+    <h1 class="success-title">Konto erfolgreich gelöscht!</h1>
+    
+    <div class="image-container">
+      <img 
+        src="/ausgebobbt.jpg" 
+        alt="Ausgebobbt" 
+        class="farewell-image"
+        loading="eager"
+      />
+    </div>
+
+    <div class="message-container">
+      <p class="success-message">
+        Ihr Konto wurde vollständig aus unserem System entfernt.
+      </p>
+      <p class="farewell-message">
+        Schwachsinn, der Bob hätte das nicht gemacht!
+      </p>
+      <p class="redirect-info">
+        Sie werden in <span class="countdown">10</span> Sekunden zur Startseite weitergeleitet...
+      </p>
+    </div>
+
+    <div class="action-buttons">
+      <button 
+        (click)="goToHome()"
+        class="home-button">
+        Verlassen
+      </button>
+    </div>
+  </div>
+</div>

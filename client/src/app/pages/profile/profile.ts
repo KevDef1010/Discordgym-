@@ -89,8 +89,29 @@ export class ProfileComponent implements OnInit {
 
   onDeleteAccount(): void {
     if (confirm('Sind Sie sicher, dass Sie Ihr Konto löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.')) {
-      // Implement account deletion logic here
-      console.log('Account deletion requested');
+      if (confirm('Geben Sie zur Bestätigung "LÖSCHEN" ein:')) {
+        // Show loading state
+        this.isLoading = true;
+        this.errorMessage = '';
+        this.successMessage = '';
+
+        this.authService.deleteAccount().subscribe({
+          next: (response) => {
+            this.successMessage = 'Ihr Konto wird gelöscht...';
+            this.isLoading = false;
+            
+            // Redirect to account deleted page
+            setTimeout(() => {
+              this.router.navigate(['/account-deleted']);
+            }, 1000);
+          },
+          error: (error) => {
+            console.error('Account deletion error:', error);
+            this.errorMessage = 'Fehler beim Löschen des Kontos. Bitte versuchen Sie es später erneut.';
+            this.isLoading = false;
+          }
+        });
+      }
     }
   }
   

@@ -3,6 +3,8 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -176,6 +178,33 @@ export class AuthService {
             discordId: discordId ? user.discordId === discordId : false,
           }
         : null,
+    };
+  }
+
+  async deleteAccount(userId: string) {
+    // Find the user to make sure they exist
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, role: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Prevent deletion of SUPER_ADMIN users (same as admin service)
+    if (user.role === 'SUPER_ADMIN') {
+      throw new BadRequestException('Cannot delete SUPER_ADMIN users');
+    }
+
+    // Delete the user (cascade deletion should handle related records)
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return {
+      message: 'Account successfully deleted',
+      deletedUser: { id: user.id, username: user.username },
     };
   }
 }

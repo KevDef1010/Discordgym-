@@ -1,0 +1,38 @@
+# Angular Frontend .dockerignore
+
+# Node modules
+node_modules
+npm-debug.log*
+
+# Angular build output
+dist
+.angular
+
+# Development files
+src/**/*.spec.ts
+e2e
+*.md
+.vscode
+.idea
+
+# Environment files
+.env*
+
+# Git
+.git
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Coverage reports
+coverage
+
+# IDE
+.vscode
+.idea

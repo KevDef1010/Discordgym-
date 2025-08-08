@@ -24,7 +24,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - NODE_ENV=development
       - DATABASE_URL=mysql://discordgym:discordgym123@db:3306/discordgym
@@ -50,11 +50,18 @@ services:
       - MARIADB_PASSWORD=discordgym123
     volumes:
       - mariadb_data:/var/lib/mysql
+      - ./server/prisma/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - "3306:3306"
+      - "3307:3306"
     networks:
       - discordgym-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # Redis for Socket.IO
   redis:
@@ -74,7 +81,7 @@ services:
       context: ./server
       dockerfile: Dockerfile.prisma
     ports:
-      - "5555:5555"
+      - "5556:5555"
     environment:
       - DATABASE_URL=mysql://discordgym:discordgym123@db:3306/discordgym
     networks:

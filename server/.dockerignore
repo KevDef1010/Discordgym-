@@ -1,0 +1,46 @@
+# NestJS Backend .dockerignore
+
+# Node modules
+node_modules
+npm-debug.log*
+
+# Build output
+dist
+
+# Development files
+src/**/*.spec.ts
+test
+*.md
+.vscode
+.idea
+
+# Environment files (except production)
+.env
+.env.development
+.env.example
+
+# Git
+.git
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Coverage reports
+coverage
+
+# IDE
+.vscode
+.idea
+
+# Prisma client (will be generated in container)
+prisma/generated
+
+# Development scripts
+dev-start.js
+fix-connection.js
