@@ -217,92 +217,66 @@
 
           <!-- Freunde Liste -->
           <div *ngIf="!friendsLoading && friends.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div *ngFor="let friendship of friends; trackBy: trackFriend" class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors">
-              <div class="flex items-center space-x-3">
+            <div *ngFor="let friendship of friends; trackBy: trackFriend" class="friend-card bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors">
+              <div class="flex items-center justify-between">
                 <!-- Avatar with Status Indicator -->
-                <div class="relative">
-                  <img [src]="getAvatarUrl(friendship.friend)" [alt]="friendship.friend.username" class="w-12 h-12 rounded-full">
-                  <!-- Online Status Dot -->
-                  <div 
-                    class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-gray-700"
-                    [ngClass]="getStatusDotClass(getUserOnlineStatus(friendship.friend.id)?.status || 'OFFLINE')"
-                  ></div>
-                </div>
-                
-                <div class="flex-1">
-                  <div class="flex items-center space-x-2">
-                    <h3 class="font-semibold">{{friendship.friend.username}}</h3>
-                    <!-- Online Status Badge -->
-                    <span 
-                      class="px-2 py-1 rounded-full text-xs"
-                      [ngClass]="isUserOnline(friendship.friend.id) ? 'bg-green-600 text-green-100' : 'bg-gray-600 text-gray-300'"
-                    >
-                      {{ getStatusText(getUserOnlineStatus(friendship.friend.id)?.status || 'OFFLINE') }}
-                    </span>
+                <div class="flex items-center space-x-3 flex-1 min-w-0">
+                  <div class="relative">
+                    <img [src]="getAvatarUrl(friendship.friend)" [alt]="friendship.friend.username" class="w-12 h-12 rounded-full">
+                    <!-- Simple Online Status Dot -->
+                    <div 
+                      class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-gray-700"
+                      [ngClass]="getStatusDotClass(getUserOnlineStatus(friendship.friend.id)?.status || 'OFFLINE')"
+                    ></div>
                   </div>
-                  <p class="text-sm text-gray-400">{{getDisplayName(friendship.friend)}}</p>
                   
-                  <!-- Enhanced Status Info -->
-                  <p class="text-xs text-gray-500">
-                    <span *ngIf="isUserOnline(friendship.friend.id); else lastSeenTemplate">
-                      Seit {{friendship.createdAt | date:'shortDate'}} • Online
-                    </span>
-                    <ng-template #lastSeenTemplate>
-                      Seit {{friendship.createdAt | date:'shortDate'}} • 
-                      <span *ngIf="getUserOnlineStatus(friendship.friend.id)?.lastSeen">
-                        Zuletzt online: {{ formatLastSeen(getUserOnlineStatus(friendship.friend.id)?.lastSeen!.toString()) }}
+                  <div class="flex-1 min-w-0">
+                    <h3 class="font-semibold truncate">{{friendship.friend.username}}</h3>
+                    <p class="text-sm text-gray-400 truncate">{{getDisplayName(friendship.friend)}}</p>
+                    
+                    <!-- Simple Status Display -->
+                    <p class="text-xs">
+                      <span 
+                        class="inline-flex items-center"
+                        [ngClass]="isUserOnline(friendship.friend.id) ? 'text-green-400' : 'text-gray-500'"
+                      >
+                        <span class="w-2 h-2 rounded-full mr-1" [ngClass]="getStatusDotClass(getUserOnlineStatus(friendship.friend.id)?.status || 'OFFLINE')"></span>
+                        {{ getStatusText(getUserOnlineStatus(friendship.friend.id)?.status || 'OFFLINE') }}
+                        <span *ngIf="!isUserOnline(friendship.friend.id) && getUserOnlineStatus(friendship.friend.id)?.lastSeen" class="ml-1">
+                          • {{ formatLastSeen(getUserOnlineStatus(friendship.friend.id)?.lastSeen!.toString()) }}
+                        </span>
                       </span>
-                      <span *ngIf="!getUserOnlineStatus(friendship.friend.id)?.lastSeen">Offline</span>
-                    </ng-template>
-                  </p>
+                    </p>
+                  </div>
                 </div>
                 
-                <div class="flex space-x-2">
+                <!-- Action Buttons - Fixed Container -->
+                <div class="flex flex-wrap gap-1 ml-3" style="min-width: fit-content;">
                   <!-- Message Button -->
                   <button 
                     (click)="startDirectMessage(friendship.friend)"
-                    class="px-3 py-1 rounded text-xs bg-purple-600 hover:bg-purple-700 transition-colors"
+                    class="px-2 py-1 rounded text-xs bg-purple-600 hover:bg-purple-700 transition-colors whitespace-nowrap"
                     title="Direktnachricht senden"
                   >
-                    💬 Nachricht
-                  </button>
-                  
-                  <!-- Invite to Group Button -->
-                  <button 
-                    (click)="showGroupInviteModal(friendship.friend)"
-                    class="px-3 py-1 rounded text-xs bg-green-600 hover:bg-green-700 transition-colors"
-                    title="Zu Gruppe einladen"
-                  >
-                    👥 Einladen
+                    �
                   </button>
                   
                   <!-- Profile Button -->
                   <button 
                     (click)="viewProfile(friendship.friend.id)"
-                    class="px-3 py-1 rounded text-xs bg-blue-600 hover:bg-blue-700 transition-colors"
+                    class="px-2 py-1 rounded text-xs bg-blue-600 hover:bg-blue-700 transition-colors whitespace-nowrap"
                   >
-                    👤 Profil
-                  </button>
-                  
-                  <!-- Status Check Button -->
-                  <button 
-                    (click)="checkFriendStatus(friendship.friend.id)"
-                    class="px-3 py-1 rounded text-xs bg-gray-600 hover:bg-gray-700 transition-colors"
-                  >
-                    📊 Status
+                    �
                   </button>
                   
                   <!-- Remove Friend Button -->
                   <button 
                     (click)="removeFriend(friendship.friend.id)"
                     [disabled]="isButtonDisabled('removeFriend', friendship.friend.id)"
-                    [class]="'px-3 py-1 rounded text-xs transition-colors ' + (isRemovingFriend(friendship.friend.id) ? 'bg-gray-600 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700')"
+                    [class]="'px-2 py-1 rounded text-xs transition-colors whitespace-nowrap ' + (isRemovingFriend(friendship.friend.id) ? 'bg-gray-600 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700')"
                   >
-                    <span *ngIf="!isRemovingFriend(friendship.friend.id)">❌ Entfernen</span>
-                    <span *ngIf="isRemovingFriend(friendship.friend.id)" class="flex items-center">
-                      <span class="animate-spin rounded-full h-3 w-3 border-b border-white mr-1"></span>
-                      Entfernen...
-                    </span>
+                    <span *ngIf="!isRemovingFriend(friendship.friend.id)">❌</span>
+                    <span *ngIf="isRemovingFriend(friendship.friend.id)" class="animate-spin rounded-full h-3 w-3 border-b border-white"></span>
                   </button>
                 </div>
               </div>

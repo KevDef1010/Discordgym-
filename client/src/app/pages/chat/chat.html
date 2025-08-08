@@ -356,65 +356,36 @@
   </div>
 </div>
 
-<!-- Create Server Modal -->
-<div *ngIf="showServerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
-    <h3 class="text-lg font-semibold text-white mb-4">Server erstellen</h3>
-    
-    <form (ngSubmit)="createServer()" class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-300 mb-2">Server Name</label>
-        <input
-          type="text"
-          [(ngModel)]="newServerName"
-          name="serverName"
-          required
-          placeholder="Mein cooler Server"
-          class="w-full bg-gray-700 text-white placeholder-gray-400 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-        >
-      </div>
-      
-      <div>
-        <label class="block text-sm font-medium text-gray-300 mb-2">Beschreibung (optional)</label>
-        <textarea
-          [(ngModel)]="newServerDescription"
-          name="serverDescription"
-          rows="3"
-          placeholder="Beschreibe deinen Server..."
-          class="w-full bg-gray-700 text-white placeholder-gray-400 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-        ></textarea>
-      </div>
-      
-      <div class="flex items-center">
-        <input
-          type="checkbox"
-          [(ngModel)]="newServerPrivate"
-          name="serverPrivate"
-          id="serverPrivate"
-          class="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500"
-        >
-        <label for="serverPrivate" class="ml-2 text-sm text-gray-300">Privater Server (nur auf Einladung)</label>
-      </div>
-      
-      <div class="flex space-x-3 pt-4">
-        <button
-          type="button"
-          (click)="showServerModal = false"
-          class="flex-1 bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-4 py-2 font-medium transition-colors"
-        >
-          Abbrechen
-        </button>
-        <button
-          type="submit"
-          [disabled]="!newServerName.trim()"
-          class="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 font-medium transition-colors"
-        >
-          Erstellen
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
+<!-- Modal Components -->
+<!-- Server Create Modal -->
+<app-server-create-modal
+  [isVisible]="showServerModal"
+  [isCreating]="isCreatingServer"
+  (closeModal)="showServerModal = false"
+  (createServer)="onCreateServer($event)">
+</app-server-create-modal>
+
+<!-- Join Server Modal -->
+<app-join-server-modal
+  [isVisible]="showJoinServerModal"
+  [isJoining]="isJoiningServer"
+  [isLoadingPreview]="isLoadingInvitePreview"
+  (closeModal)="showJoinServerModal = false"
+  (joinServer)="onJoinServer($event)"
+  (previewInviteEvent)="onPreviewInvite($event)">
+</app-join-server-modal>
+
+<!-- Server Invite Modal -->
+<app-invite-modal
+  [isVisible]="showInviteModal"
+  [serverId]="selectedServer?.id || null"
+  [invites]="serverInvites"
+  [isCreatingInvite]="isCreatingInvite"
+  (closeModal)="showInviteModal = false"
+  (createInviteEvent)="onCreateInvite($event)"
+  (copyInviteEvent)="copyInviteLink($event)"
+  (deleteInviteEvent)="onDeleteInvite($event)">
+</app-invite-modal>
 
 <!-- Create Channel Modal -->
 <div *ngIf="showChannelModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

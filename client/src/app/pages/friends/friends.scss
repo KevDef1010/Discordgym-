@@ -4,6 +4,104 @@
   background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
 }
 
+/* Friend Card Container */
+.friend-card {
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  overflow: hidden; /* Prevent content overflow */
+  
+  .flex {
+    align-items: center;
+    gap: 0.75rem; /* 12px */
+  }
+  
+  /* Ensure buttons don't overflow */
+  .button-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    min-width: fit-content;
+    flex-shrink: 0;
+  }
+  
+  /* Status display improvements */
+  .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    
+    .status-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+      margin-right: 0.25rem;
+      flex-shrink: 0;
+    }
+  }
+  
+  /* Responsive button layout */
+  @media (max-width: 768px) {
+    .button-container {
+      flex-direction: column;
+      align-items: stretch;
+      
+      button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+}
+
+.friend-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Status Indicator Colors and Animation */
+.status-online {
+  background-color: #22c55e;
+  animation: pulse-green 2s infinite;
+}
+
+.status-away {
+  background-color: #eab308;
+  animation: pulse-yellow 2s infinite;
+}
+
+.status-dnd {
+  background-color: #ef4444;
+}
+
+.status-offline {
+  background-color: #6b7280;
+}
+
+@keyframes pulse-green {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+@keyframes pulse-yellow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(234, 179, 8, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(234, 179, 8, 0);
+  }
+}
+
 /* Real-time Notification Animations */
 @keyframes slide-in {
   from {
@@ -43,18 +141,6 @@
   transition: all 0.2s ease;
 }
 
-/* Friend Card Hover Effect */
-.friend-card {
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
-}
-
-.friend-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(59, 130, 246, 0.3);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
 /* Avatar Glow Effect */
 .avatar-glow {
   transition: all 0.2s ease;
@@ -77,23 +163,6 @@
 
 .btn-animated:active {
   transform: translateY(0);
-}
-
-/* Status Indicator Pulse */
-.status-online {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
-  }
 }
 
 /* Loading Spinner Custom */

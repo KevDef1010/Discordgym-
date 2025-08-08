@@ -6,6 +6,11 @@ import { Subscription } from 'rxjs';
 import { AuthService, User } from '../../shared/services/auth.service';
 import { SocketService, OnlineUser } from '../../shared/services/socket.service';
 import { ChatService } from '../../shared/services/chat.service';
+import { 
+  InviteModalComponent, 
+  ServerCreateModalComponent, 
+  JoinServerModalComponent 
+} from '../../shared/components';
 
 // Simplified interfaces for the component
 interface ChatServer {
@@ -67,7 +72,13 @@ interface DirectMessage {
 
 @Component({
   selector: 'app-chat',
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule, 
+    FormsModule,
+    InviteModalComponent,
+    ServerCreateModalComponent,
+    JoinServerModalComponent
+  ],
   templateUrl: './chat.html',
   styleUrl: './chat.scss'
 })
@@ -98,6 +109,13 @@ export class ChatComponent implements OnInit, OnDestroy {
   showChannelModal = false;
   showFriendChatModal = false;
   showInviteModal = false;
+  showJoinServerModal = false;
+  
+  // Loading states
+  isCreatingServer = false;
+  isJoiningServer = false;
+  isLoadingInvitePreview = false;
+  isCreatingInvite = false;
   
   // New server/channel form data
   newServerName = '';
@@ -859,6 +877,66 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   formatExpiryDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString('de-DE');
+  }
+
+  // New Modal Event Handlers
+  onCreateServer(serverData: {name: string, description?: string, isPrivate: boolean}): void {
+    this.isCreatingServer = true;
+    this.newServerName = serverData.name;
+    this.newServerDescription = serverData.description || '';
+    this.newServerPrivate = serverData.isPrivate;
+    
+    this.createServer().finally(() => {
+      this.isCreatingServer = false;
+      this.showServerModal = false;
+    });
+  }
+
+  onJoinServer(inviteCode: string): void {
+    this.isJoiningServer = true;
+    this.joinServerByInvite(inviteCode).finally(() => {
+      this.isJoiningServer = false;
+      this.showJoinServerModal = false;
+    });
+  }
+
+  onPreviewInvite(inviteCode: string): void {
+    this.isLoadingInvitePreview = true;
+    // TODO: Implement invite preview functionality
+    console.log('Preview invite:', inviteCode);
+    this.isLoadingInvitePreview = false;
+  }
+
+  onCreateInvite(inviteData: {maxUses?: number, expiresIn?: number}): void {
+    this.isCreatingInvite = true;
+    this.newInviteMaxUses = inviteData.maxUses;
+    this.newInviteExpiresHours = inviteData.expiresIn;
+    
+    this.createInvite().finally(() => {
+      this.isCreatingInvite = false;
+    });
+  }
+
+  onDeleteInvite(inviteId: number): void {
+    this.deleteInvite(inviteId.toString());
+  }
+
+  async joinServerByInvite(inviteCode: string): Promise<void> {
+    try {
+      const result = await this.chatService.joinServerByInvite(inviteCode);
+      if (result.success) {
+        // Refresh server list by reloading servers
+        const servers = await this.chatService.getUserServers();
+        this.chatServers = servers as ChatServer[];
+        
+        // Select the joined server
+        if (result.server) {
+          this.selectServer(result.server);
+        }
+      }
+    } catch (error) {
+      console.error('Error joining server:', error);
+    }
   }
 
   private leaveCurrentRoom(): void {

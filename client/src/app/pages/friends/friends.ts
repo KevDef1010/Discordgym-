@@ -514,10 +514,11 @@ export class FriendsComponent implements OnInit, OnDestroy {
 
   getStatusDotClass(status: string): string {
     switch (status) {
-      case 'ONLINE': return 'bg-green-500';
-      case 'AWAY': return 'bg-yellow-500';
-      case 'DO_NOT_DISTURB': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      case 'ONLINE': return 'bg-green-500 status-online';
+      case 'AWAY': return 'bg-yellow-500 status-away';
+      case 'DO_NOT_DISTURB': return 'bg-red-500 status-dnd';
+      case 'OFFLINE':
+      default: return 'bg-gray-500 status-offline';
     }
   }
 
