@@ -57,13 +57,10 @@ async function bootstrap() {
   
   // Enable CORS for frontend
   app.enableCors({
-    origin: [
-      'http://localhost:4200', 
-      'http://localhost:4201', 
-      'http://localhost:4202',
-      /^http:\/\/localhost:\d+$/  // Allow any localhost port
-    ],
+    origin: true, // Allow all origins for development
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
   });
   
   // Enable validation globally

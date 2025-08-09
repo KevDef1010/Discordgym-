@@ -156,19 +156,19 @@ export class SocketService {
 
   private initializeConnections(): void {
     // Main socket connection
-    this.socket = io('http://localhost:3000', {
+    this.socket = io('http://localhost:3001', {
       withCredentials: true,
       transports: ['websocket', 'polling']
     });
 
     // Friends namespace
-    this.friendsSocket = io('http://localhost:3000/friends', {
+    this.friendsSocket = io('http://localhost:3001/friends', {
       withCredentials: true,
       transports: ['websocket', 'polling']
     });
 
     // Chat namespace
-    this.chatSocket = io('http://localhost:3000/chat', {
+    this.chatSocket = io('http://localhost:3001/chat', {
       withCredentials: true,
       transports: ['websocket', 'polling']
     });

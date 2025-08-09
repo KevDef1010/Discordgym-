@@ -13,10 +13,10 @@ import {
 import { AdminService } from './admin.service';
 import { UpdateUserRoleDto } from './dto/admin.dto';
 
-// Admin Controller for user management
+// Management Controller for user administration
 // TODO: Implement proper auth guards for admin access
 // @UseGuards(AdminGuard)
-@Controller('admin')
+@Controller('management')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 

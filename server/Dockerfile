@@ -2,7 +2,7 @@
 # NestJS Backend Dockerfile
 # ===================================
 
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Create app directory
 WORKDIR /app
@@ -28,6 +28,14 @@ RUN npx prisma generate
 # Build the application
 RUN npx nest build
 
+# Check build output
+RUN echo "Build completed, checking dist directory:" && \
+    ls -la /app/ && \
+    echo "Dist directory contents:" && \
+    ls -la /app/dist/ && \
+    echo "Src directory contents after build:" && \
+    find /app -name "*.js" -type f | head -10
+
 # Clean up dev dependencies after build
 RUN npm prune --production
 
@@ -35,8 +43,12 @@ RUN npm prune --production
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S discordgym -u 1001 -G nodejs
 
-# Change ownership of the app directory
+# Change ownership of the app directory (including dist)
 RUN chown -R discordgym:nodejs /app
+
+# Verify dist directory exists
+RUN ls -la /app/dist && echo "Main.js check:" && ls -la /app/dist/src/main.js || echo "main.js not found, searching for JS files:" && find /app -name "*.js" -type f | head -5
+
 USER discordgym
 
 # Expose port

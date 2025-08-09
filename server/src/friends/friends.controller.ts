@@ -16,14 +16,14 @@ import {
 import { FriendsService } from './friends.service';
 import { SendFriendRequestDto, UpdateFriendRequestDto } from './dto/friends.dto';
 
-// Friends Controller for friendship management
+// Social Controller for friendship management
 // TODO: Implement proper auth guards and get user from JWT
-@Controller('friends')
+@Controller('social')
 export class FriendsController {
   constructor(private readonly friendsService: FriendsService) {}
 
   // Freundschaftsanfrage senden
-  @Post('request')
+  @Post('friend-request')
   async sendFriendRequest(
     @Body() sendFriendRequestDto: SendFriendRequestDto,
     // TODO: Get from JWT token instead of body

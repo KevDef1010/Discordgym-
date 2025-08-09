@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Delete, Body } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-@Controller('database')
+@Controller('system')
 export class DatabaseController {
   constructor(private readonly prisma: PrismaService) {}
 
-  @Get('stats')
+  @Get('database-stats')
   async getStats() {
     const [users, workouts, exercises, challenges, progress] =
       await Promise.all([

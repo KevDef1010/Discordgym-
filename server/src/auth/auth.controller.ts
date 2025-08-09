@@ -26,7 +26,7 @@ export class AuthController {
     return await this.authService.login(loginDto);
   }
 
-  @Get('check')
+  @Get('exists')
   async checkUserExists(
     @Query('email') email: string,
     @Query('username') username: string,
@@ -36,7 +36,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Delete('account')
+  @Delete('delete-account')
   async deleteAccount(@Request() req: any) {
     return await this.authService.deleteAccount(req.user.id as string);
   }

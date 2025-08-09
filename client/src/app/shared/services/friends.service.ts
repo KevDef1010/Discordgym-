@@ -57,7 +57,7 @@ export interface FriendStats {
   providedIn: 'root'
 })
 export class FriendsService {
-  private readonly apiUrl = 'http://localhost:3000/friends';
+  private readonly apiUrl = 'http://localhost:80/friends';
 
   constructor(private http: HttpClient) {}
 

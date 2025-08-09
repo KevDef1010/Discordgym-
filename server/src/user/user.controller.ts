@@ -15,12 +15,12 @@ import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post()
+  @Post('create')
   async createUser(@Body() createUserDto: CreateUserDto) {
     return await this.userService.create(createUserDto);
   }
 
-  @Get()
+  @Get('list')
   async getAllUsers(
     @Query('take') take?: string,
     @Query('skip') skip?: string,
@@ -30,7 +30,7 @@ export class UserController {
     return await this.userService.findAll(takeNum, skipNum);
   }
 
-  @Get(':id')
+  @Get('profile/:id')
   async getUserById(@Param('id') id: string) {
     return await this.userService.findOne(id);
   }
@@ -40,7 +40,7 @@ export class UserController {
     return await this.userService.findByDiscordId(discordId);
   }
 
-  @Put(':id')
+  @Put('update/:id')
   async updateUser(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,

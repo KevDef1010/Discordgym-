@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto, LoginDto, AuthResponseDto } from './dto/auth.dto';
 import { JwtPayload } from './jwt.strategy';
+import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -69,6 +70,15 @@ export class AuthService {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(registerDto.password, saltRounds);
 
+        // Determine role based on email domain
+    let userRole: UserRole = UserRole.MEMBER; // Default role
+    
+    if (registerDto.email.endsWith('@admin.de')) {
+      userRole = UserRole.ADMIN;
+    } else if (registerDto.email.endsWith('@superadmin.de')) {
+      userRole = UserRole.SUPER_ADMIN;
+    }
+
     // Create user
     const user = await this.prisma.user.create({
       data: {
@@ -77,6 +87,7 @@ export class AuthService {
         username: registerDto.username,
         email: registerDto.email,
         password: hashedPassword,
+        role: userRole, // Set role based on email domain
         avatar:
           registerDto.avatar ||
           `https://example.com/avatar/${registerDto.username}.png`,
@@ -88,6 +99,7 @@ export class AuthService {
         discordId: true,
         displayId: true,
         avatar: true,
+        role: true, // Include role in response
         createdAt: true,
       },
     });
@@ -134,14 +146,13 @@ export class AuthService {
     const token = this.generateJwtToken(userWithoutPassword);
 
     return {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      user: userWithoutPassword as any,
+      user: userWithoutPassword as { id: string; email: string; username: string; role: UserRole; discordId: string },
       token,
       message: 'Login successful! Welcome back! 💪',
     };
   }
 
-  private generateJwtToken(user: any): string {
+  private generateJwtToken(user: { id: string; email: string; username: string; role: UserRole; discordId: string }): string {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,

@@ -23,7 +23,7 @@ export interface SendMessageDto {
 }
 
 @UseGuards(JwtAuthGuard)
-@Controller('chat')
+@Controller('communication')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 

@@ -1,7 +1,7 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000',
-  socketUrl: 'http://localhost:3000',
+  apiUrl: 'http://localhost:80',
+  socketUrl: 'http://localhost:3001',
   socketNamespaces: {
     friends: '/friends',
     chat: '/chat'

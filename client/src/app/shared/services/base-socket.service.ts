@@ -23,14 +23,14 @@ export class BaseSocketService {
 
   constructor() {}
 
-  protected initialize(namespace: string = '', baseUrl: string = 'http://localhost:3000'): void {
+  protected initialize(namespace: string = '', baseUrl: string = 'http://localhost:3001'): void {
     this.namespace = namespace;
     this.baseUrl = baseUrl;
     this.initializeConnection();
   }
 
   private namespace: string = '';
-  private baseUrl: string = 'http://localhost:3000';
+  private baseUrl: string = 'http://localhost:3001';
 
   protected initializeConnection(): void {
     const url = this.namespace ? `${this.baseUrl}${this.namespace}` : this.baseUrl;

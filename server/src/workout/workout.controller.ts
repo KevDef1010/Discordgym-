@@ -11,16 +11,16 @@ import {
 import { WorkoutService } from './workout.service';
 import { CreateWorkoutDto, UpdateWorkoutDto } from './dto/workout.dto';
 
-@Controller('workouts')
+@Controller('fitness')
 export class WorkoutController {
   constructor(private readonly workoutService: WorkoutService) {}
 
-  @Post()
+  @Post('create-workout')
   async createWorkout(@Body() createWorkoutDto: CreateWorkoutDto) {
     return await this.workoutService.create(createWorkoutDto);
   }
 
-  @Get()
+  @Get('workouts')
   async getAllWorkouts(
     @Query('take') take?: string,
     @Query('skip') skip?: string,

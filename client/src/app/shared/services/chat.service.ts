@@ -150,7 +150,7 @@ export interface DirectChatUser {
   providedIn: 'root'
 })
 export class ChatService {
-  private readonly baseUrl = 'http://localhost:3000/chat';
+  private readonly baseUrl = 'http://localhost:80/chat';
 
   constructor(
     private http: HttpClient,

@@ -42,7 +42,7 @@ interface UserSearchParams {
   providedIn: 'root'
 })
 export class AdminService {
-  private readonly baseUrl = 'http://localhost:3000/admin';
+  private readonly baseUrl = 'http://localhost:80/admin';
 
   constructor(private http: HttpClient) {}
 
