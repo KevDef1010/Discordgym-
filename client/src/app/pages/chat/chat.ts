@@ -149,6 +149,9 @@ export class ChatComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // Reset all modal states to ensure clean start
+    this.resetModalStates();
+    
     // Get user once directly without subscribing
     this.currentUser = this.authService.getCurrentUser();
     
@@ -942,5 +945,20 @@ export class ChatComponent implements OnInit, OnDestroy {
   private leaveCurrentRoom(): void {
     // Implementation for leaving current room when socket is properly exposed
     console.log('Leaving current room...');
+  }
+
+  private resetModalStates(): void {
+    // Reset all modal states to ensure clean start
+    this.showServerModal = false;
+    this.showChannelModal = false;
+    this.showFriendChatModal = false;
+    this.showInviteModal = false;
+    this.showJoinServerModal = false;
+    
+    // Reset loading states
+    this.isCreatingServer = false;
+    this.isJoiningServer = false;
+    this.isLoadingInvitePreview = false;
+    this.isCreatingInvite = false;
   }
 }

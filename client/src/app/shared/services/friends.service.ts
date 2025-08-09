@@ -57,7 +57,7 @@ export interface FriendStats {
   providedIn: 'root'
 })
 export class FriendsService {
-  private readonly apiUrl = 'http://localhost:80/friends';
+  private readonly apiUrl = 'http://localhost:3001/social';
 
   constructor(private http: HttpClient) {}
 
@@ -77,7 +77,7 @@ export class FriendsService {
 
   // Freundschaftsanfrage senden
   sendFriendRequest(senderId: string, receiverId: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/request`, {
+    return this.http.post(`${this.apiUrl}/friend-request`, {
       senderId,
       receiverId
     });

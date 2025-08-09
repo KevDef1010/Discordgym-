@@ -150,7 +150,7 @@ export interface DirectChatUser {
   providedIn: 'root'
 })
 export class ChatService {
-  private readonly baseUrl = 'http://localhost:80/chat';
+  private readonly baseUrl = 'http://localhost:3001/communication';
 
   constructor(
     private http: HttpClient,
@@ -359,12 +359,12 @@ export class ChatService {
     return this.makeAuthenticatedRequest(
       // Authenticated call
       async () => {
-        const url = `${this.baseUrl}/friends/${currentUserId}`;
+        const url = `http://localhost:3001/social/list/${currentUserId}`;
         return firstValueFrom(this.http.get<Friend[]>(url));
       },
       // Public fallback
       async () => {
-        const url = `${this.baseUrl}/public/friends/${currentUserId}`;
+        const url = `http://localhost:3001/social/public/list/${currentUserId}`;
         return firstValueFrom(this.http.get<Friend[]>(url));
       }
     );
