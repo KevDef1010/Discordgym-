@@ -100,13 +100,29 @@ export interface ChatMessage {
     id: string;
     username: string;
     avatar?: string;
+    displayId?: string;
   };
   receiver?: {
     id: string;
     username: string;
     avatar?: string;
   };
-  reactions: MessageReaction[];
+  reactions?: MessageReaction[];
+}
+
+/**
+ * Interface representing a server member
+ */
+export interface ServerMember {
+  id: string;
+  userId: string;
+  username: string;
+  avatar?: string;
+  displayId?: string;
+  isActive: boolean;
+  role: 'OWNER' | 'ADMIN' | 'MEMBER';
+  joinedAt: string;
+  isOwner: boolean;
 }
 
 export interface MessageReaction {
@@ -215,6 +231,16 @@ export class ChatService {
   async leaveServer(serverId: string): Promise<void> {
     const url = `${this.baseUrl}/servers/${serverId}/leave`;
     return firstValueFrom(this.http.delete<void>(url));
+  }
+
+  async removeUserFromServer(serverId: string, userId: string): Promise<{ success: boolean; message: string }> {
+    const url = `${this.baseUrl}/servers/${serverId}/members/${userId}`;
+    return firstValueFrom(this.http.delete<{ success: boolean; message: string }>(url));
+  }
+
+  async getServerMembers(serverId: string): Promise<ServerMember[]> {
+    const url = `${this.baseUrl}/servers/${serverId}/members`;
+    return firstValueFrom(this.http.get<ServerMember[]>(url));
   }
 
   // Channel management

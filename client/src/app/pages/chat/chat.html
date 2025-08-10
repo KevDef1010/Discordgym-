@@ -292,19 +292,34 @@
         </svg>
         <h2 class="text-lg font-semibold">{{ selectedChannel.name }}</h2>
         <span *ngIf="selectedChannel.description" class="text-sm text-gray-400 ml-2">{{ selectedChannel.description }}</span>
-        
-        <!-- Server Invite Button -->
-        <button 
-          *ngIf="selectedServer"
-          (click)="openInviteModal()"
-          class="ml-auto bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-3 py-1 text-sm font-medium transition-colors flex items-center"
-          title="Server-Einladung erstellen"
-        >
-          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
-          Einladen
-        </button>
+        <!-- Server Actions -->
+        <div class="ml-auto flex items-center space-x-2">
+          <!-- Members Button -->
+          <button 
+            *ngIf="selectedServer"
+            (click)="openMembersModal()"
+            class="bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-3 py-1 text-sm font-medium transition-colors flex items-center"
+            title="Mitglieder verwalten"
+          >
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            </svg>
+            Mitglieder
+          </button>
+          
+          <!-- Server Invite Button -->
+          <button 
+            *ngIf="selectedServer"
+            (click)="openInviteModal()"
+            class="bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-3 py-1 text-sm font-medium transition-colors flex items-center"
+            title="Server-Einladung erstellen"
+          >
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Einladen
+          </button>
+        </div>
       </div>
       
       <div *ngIf="selectedDirectMessage" class="flex items-center">
@@ -572,3 +587,14 @@
     </div>
   </div>
 </div>
+
+<!-- Server Members Modal -->
+<app-server-members-modal
+  *ngIf="showMembersModal && selectedServer"
+  [serverId]="selectedServer.id"
+  [currentUserRole]="getCurrentUserRole()"
+  (close)="closeMembersModal()"
+  (memberRemoved)="onMemberRemoved($event)"
+  (leftServer)="onLeftServer()"
+>
+</app-server-members-modal>

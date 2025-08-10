@@ -23,7 +23,8 @@ import { ChatService } from '../../shared/services/chat.service';
 import { 
   InviteModalComponent, 
   ServerCreateModalComponent, 
-  JoinServerModalComponent 
+  JoinServerModalComponent,
+  ServerMembersModalComponent
 } from '../../shared/components';
 
 // Interface definitions for the chat system
@@ -119,7 +120,8 @@ interface MessageNotification {
     FormsModule,
     InviteModalComponent,
     ServerCreateModalComponent,
-    JoinServerModalComponent
+    JoinServerModalComponent,
+    ServerMembersModalComponent
   ],
   templateUrl: './chat.html',
   styleUrl: './chat.scss'
@@ -163,6 +165,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
   showFriendChatModal = false; // Start chat with friend modal
   showInviteModal = false; // Create server invite modal
   showJoinServerModal = false; // Join server via invite modal
+  showMembersModal = false; // Server members management modal
   
   // ===== LOADING STATES =====
   isCreatingServer = false; // Server creation in progress
@@ -213,6 +216,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     this.showFriendChatModal = false;
     this.showInviteModal = false;
     this.showJoinServerModal = false;
+    this.showMembersModal = false;
   }
 
   /**
@@ -234,6 +238,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     this.showFriendChatModal = false;
     this.showInviteModal = false;
     this.showJoinServerModal = false;
+    this.showMembersModal = false;
     
     console.log('� All modal states FORCE RESET - checking states:');
     console.log('showServerModal:', this.showServerModal);
@@ -1239,6 +1244,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     this.showFriendChatModal = false;
     this.showInviteModal = false;
     this.showJoinServerModal = false;
+    this.showMembersModal = false;
     
     // Reset loading states
     this.isCreatingServer = false;
@@ -2008,5 +2014,61 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     
     console.log('✅ Showing notification for message:', messageKey);
     return true;
+  }
+
+  // ===== SERVER MEMBERS MANAGEMENT =====
+  
+  /**
+   * Open the server members modal
+   */
+  openMembersModal(): void {
+    if (!this.selectedServer) {
+      console.error('No server selected');
+      return;
+    }
+    this.showMembersModal = true;
+  }
+
+  /**
+   * Close the server members modal
+   */
+  closeMembersModal(): void {
+    this.showMembersModal = false;
+  }
+
+  /**
+   * Get current user's role in the selected server
+   */
+  getCurrentUserRole(): 'OWNER' | 'ADMIN' | 'MEMBER' {
+    if (!this.selectedServer || !this.currentUser) {
+      return 'MEMBER';
+    }
+    
+    // This would need to be fetched from the server
+    // For now, return MEMBER as default
+    return 'MEMBER';
+  }
+
+  /**
+   * Handle member removed from server
+   */
+  onMemberRemoved(member: any): void {
+    console.log('Member removed:', member);
+    // Optionally refresh server data or update local state
+  }
+
+  /**
+   * Handle user left server
+   */
+  onLeftServer(): void {
+    console.log('Left server');
+    // Remove server from local list and switch to direct messages
+    if (this.selectedServer) {
+      this.chatServers = this.chatServers.filter((s: ChatServer) => s.id !== this.selectedServer!.id);
+      this.selectedServer = null;
+      this.selectedChannel = null;
+      this.activeTab = 'direct';
+    }
+    this.closeMembersModal();
   }
 }

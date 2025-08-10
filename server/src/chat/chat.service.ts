@@ -485,6 +485,182 @@ export class ChatService {
     };
   }
 
+  /**
+   * Remove a user from a server (kick member)
+   * Only server owners and admins can remove members
+   * @param serverId - ID of the server
+   * @param targetUserId - ID of the user to remove
+   * @param requesterId - ID of the user making the request
+   * @returns Success confirmation
+   */
+  async removeUserFromServer(
+    serverId: string,
+    targetUserId: string,
+    requesterId: string,
+  ) {
+    // Check if requester is a member and has permission
+    const requesterMember = await this.prisma.chatServerMember.findFirst({
+      where: {
+        userId: requesterId,
+        chatServerId: serverId,
+      },
+      include: {
+        chatServer: {
+          select: { ownerId: true },
+        },
+      },
+    });
+
+    if (!requesterMember) {
+      throw new Error('You are not a member of this server');
+    }
+
+    // Check if requester has permission (owner or admin)
+    const isOwner = requesterMember.chatServer.ownerId === requesterId;
+    const isAdmin = requesterMember.role === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      throw new Error('You do not have permission to remove members');
+    }
+
+    // Check if target user is a member
+    const targetMember = await this.prisma.chatServerMember.findFirst({
+      where: {
+        userId: targetUserId,
+        chatServerId: serverId,
+      },
+    });
+
+    if (!targetMember) {
+      throw new Error('User is not a member of this server');
+    }
+
+    // Cannot remove the server owner
+    if (requesterMember.chatServer.ownerId === targetUserId) {
+      throw new Error('Cannot remove the server owner');
+    }
+
+    // Admins cannot remove other admins (only owner can)
+    if (targetMember.role === 'ADMIN' && !isOwner) {
+      throw new Error('Only the server owner can remove admins');
+    }
+
+    // Remove the user from the server
+    await this.prisma.chatServerMember.delete({
+      where: {
+        id: targetMember.id,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'User removed from server successfully',
+    };
+  }
+
+  /**
+   * Leave a server (self-removal)
+   * @param serverId - ID of the server to leave
+   * @param userId - ID of the user leaving
+   * @returns Success confirmation
+   */
+  async leaveServer(serverId: string, userId: string) {
+    // Check if user is a member
+    const member = await this.prisma.chatServerMember.findFirst({
+      where: {
+        userId,
+        chatServerId: serverId,
+      },
+      include: {
+        chatServer: {
+          select: { ownerId: true },
+        },
+      },
+    });
+
+    if (!member) {
+      throw new Error('You are not a member of this server');
+    }
+
+    // Server owner cannot leave their own server
+    if (member.chatServer.ownerId === userId) {
+      throw new Error(
+        'Server owners cannot leave their own server. Transfer ownership or delete the server instead.',
+      );
+    }
+
+    // Remove the user from the server
+    await this.prisma.chatServerMember.delete({
+      where: {
+        id: member.id,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Left server successfully',
+    };
+  }
+
+  /**
+   * Get all members of a server
+   * @param serverId - ID of the server
+   * @param requesterId - ID of the user making the request
+   * @returns List of server members with user information
+   */
+  async getServerMembers(serverId: string, requesterId: string) {
+    // Check if requester is a member
+    const requesterMember = await this.prisma.chatServerMember.findFirst({
+      where: {
+        userId: requesterId,
+        chatServerId: serverId,
+      },
+    });
+
+    if (!requesterMember) {
+      throw new Error('You are not a member of this server');
+    }
+
+    // Get all server members
+    const members = await this.prisma.chatServerMember.findMany({
+      where: {
+        chatServerId: serverId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatar: true,
+            displayId: true,
+            isActive: true,
+          },
+        },
+        chatServer: {
+          select: {
+            ownerId: true,
+          },
+        },
+      },
+      orderBy: [
+        { role: 'asc' }, // OWNER first, then ADMIN, then MEMBER
+        { joinedAt: 'asc' },
+      ],
+    });
+
+    return members.map((member) => ({
+      id: member.id,
+      userId: member.user.id,
+      username: member.user.username,
+      avatar: member.user.avatar,
+      displayId: member.user.displayId,
+      isActive: member.user.isActive,
+      role: member.role,
+      joinedAt: member.joinedAt,
+      isOwner: member.chatServer.ownerId === member.user.id,
+    }));
+  }
+
   // Get invite info (public, no auth required)
   async getInviteInfo(code: string) {
     const invite = await this.prisma.chatServerInvite.findUnique({

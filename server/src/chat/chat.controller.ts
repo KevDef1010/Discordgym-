@@ -151,6 +151,31 @@ export class ChatController {
   async getUserInvites(@Request() req) {
     return this.chatService.getUserInvites(req.user.id);
   }
+
+  // Remove user from server (kick member)
+  @Delete('servers/:serverId/members/:userId')
+  async removeUserFromServer(
+    @Param('serverId') serverId: string,
+    @Param('userId') userId: string,
+    @Request() req: any,
+  ) {
+    return this.chatService.removeUserFromServer(serverId, userId, req.user.id);
+  }
+
+  // Leave server
+  @Delete('servers/:serverId/leave')
+  async leaveServer(@Param('serverId') serverId: string, @Request() req: any) {
+    return this.chatService.leaveServer(serverId, req.user.id);
+  }
+
+  // Get server members
+  @Get('servers/:serverId/members')
+  async getServerMembers(
+    @Param('serverId') serverId: string,
+    @Request() req: any,
+  ) {
+    return this.chatService.getServerMembers(serverId, req.user.id);
+  }
 }
 
 // Temporary controller for testing without auth
@@ -213,5 +238,33 @@ export class PublicChatController {
     @Body() body: { userId: string },
   ) {
     return this.chatService.joinServerByInvite(code, body.userId);
+  }
+
+  // Remove user from server (public endpoint for testing)
+  @Delete('servers/:serverId/members/:userId')
+  async removeUserFromServer(
+    @Param('serverId') serverId: string,
+    @Param('userId') userId: string,
+    @Body() body: { requesterId: string },
+  ) {
+    return this.chatService.removeUserFromServer(serverId, userId, body.requesterId);
+  }
+
+  // Leave server (public endpoint for testing)
+  @Delete('servers/:serverId/leave')
+  async leaveServer(
+    @Param('serverId') serverId: string,
+    @Body() body: { userId: string },
+  ) {
+    return this.chatService.leaveServer(serverId, body.userId);
+  }
+
+  // Get server members (public endpoint for testing)
+  @Get('servers/:serverId/members')
+  async getServerMembers(
+    @Param('serverId') serverId: string,
+    @Body() body: { requesterId: string },
+  ) {
+    return this.chatService.getServerMembers(serverId, body.requesterId);
   }
 }
