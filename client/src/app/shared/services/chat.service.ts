@@ -240,7 +240,10 @@ export class ChatService {
       channelId: channelId,
       messageType: messageData.messageType || 'TEXT'
     };
-    return this.sendMessage(sendData);
+    // Use the correct channel-specific endpoint
+    const url = `${this.baseUrl}/channels/${channelId}/messages`;
+    console.log('🔗 Sending to URL:', url, 'with data:', sendData);
+    return firstValueFrom(this.http.post<ChatMessage>(url, sendData));
   }
 
   async sendDirectMessage(receiverId: string, messageData: any): Promise<ChatMessage> {

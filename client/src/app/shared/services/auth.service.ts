@@ -198,7 +198,7 @@ export class AuthService {
       headers: { Authorization: `Bearer ${token}` }
     } : {};
     
-    return this.http.delete(`${this.API_URL}/auth/account`, options)
+    return this.http.delete(`${this.API_URL}/auth/delete-account`, options)
       .pipe(
         tap(() => {
           // After successful deletion, clear all local data and log out
