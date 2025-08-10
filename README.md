@@ -71,12 +71,12 @@ docker-compose -f docker-compose.ha.yml up -d
 ```
 
 **Was passiert beim HA-Start:**
-- 🚀 **3 Backend-Instanzen** werden gestartet (`discordgym-api-1`, `discordgym-api-2`, `discordgym-api-3`)
-- ⚖️ **NGINX Load Balancer** verteilt Traffic automatisch
-- 🗄️ **MariaDB Datenbank** mit persistentem Storage
-- 🔄 **Redis Cache** für geteilte Sessions
-- 🖥️ **Angular Frontend** über NGINX
-- 📊 **Prisma Studio** für Database Management
+- **3 Backend-Instanzen** werden gestartet (`discordgym-api-1`, `discordgym-api-2`, `discordgym-api-3`)
+- **NGINX Load Balancer** verteilt Traffic automatisch
+- **MariaDB Datenbank** mit persistentem Storage
+- **Redis Cache** für geteilte Sessions
+- **Angular Frontend** über NGINX
+- **Prisma Studio** für Database Management
 
 ## Zugriff
 
@@ -96,7 +96,7 @@ docker-compose -f docker-compose.ha.yml up -d
 - **Database Admin**: http://localhost:5556
 - **Health Check**: http://localhost:3001/health
 
-**🔍 HA-System testen:**
+**HA-System testen:**
 ```bash
 # Status aller Container prüfen
 docker-compose -f docker-compose.ha.yml ps
@@ -118,14 +118,14 @@ curl http://localhost
 # Sollte HTML der Angular App zurückgeben
 ```
 
-**🚨 Failover-Test (Ausfallsicherheit demonstrieren):**
+**Failover-Test (Ausfallsicherheit demonstrieren):**
 ```bash
 # Schritt 1: Einen Backend-Container "abschießen"
 docker stop discordgym-discordgym-api-1-1
 
 # Schritt 2: Prüfen ob System noch funktioniert
 curl http://localhost:3001/health
-# ✅ Sollte immer noch "OK" zurückgeben!
+# Sollte immer noch "OK" zurückgeben!
 
 # Schritt 3: Status prüfen - nur 2 von 3 Backends laufen
 docker-compose -f docker-compose.ha.yml ps
@@ -186,7 +186,7 @@ docker-compose -f docker-compose.ha.yml logs -f      # Logs verfolgen
 docker-compose -f docker-compose.ha.yml down         # HA stoppen
 ```
 
-**🔧 HA-Troubleshooting:**
+**HA-Troubleshooting:**
 ```bash
 # Problem: Port-Konflikte
 # Lösung: Zuerst dev-Version stoppen
@@ -246,7 +246,7 @@ hastart   # High-Availability mit Load Balancer
 - Zero-Downtime bei Backend-Ausfällen
 - Automatische Health Checks und Recovery
 
-**💡 Perfekt für:**
+**Perfekt für:**
 - Professor-Demonstrationen
 - Production-ähnliche Tests
 - Load-Testing mit mehreren Benutzern
@@ -292,7 +292,7 @@ docker stop discordgym-discordgym-api-1-1
 
 # 4. System funktioniert weiter testen
 curl http://localhost:3001/health
-# ✅ Sollte immer noch {"status":"OK"} zurückgeben
+# Sollte immer noch {"status":"OK"} zurückgeben
 
 # 5. Status nach Ausfall prüfen (nur 2 von 3 APIs laufen)
 docker-compose -f docker-compose.ha.yml ps
@@ -302,13 +302,13 @@ docker-compose -f docker-compose.ha.yml up -d discordgym-api-1
 
 # 7. Vollständige Wiederherstellung bestätigen
 docker-compose -f docker-compose.ha.yml ps
-# ✅ Alle 3 APIs sollten wieder "Up" sein
+# Alle 3 APIs sollten wieder "Up" sein
 
 # Zeigt:
-# ✅ Zero-Downtime trotz Ausfall einer Backend-Instanz
-# ✅ Automatisches Load Balancing auf verbleibende Instanzen
-# ✅ Nahtlose Wiederherstellung ohne Serviceunterbrechung
-# ✅ Enterprise-Grade Hochverfügbarkeit
+# Zero-Downtime trotz Ausfall einer Backend-Instanz
+# Automatisches Load Balancing auf verbleibende Instanzen
+# Nahtlose Wiederherstellung ohne Serviceunterbrechung
+# Enterprise-Grade Hochverfügbarkeit
 ```
 
 ## Technologie-Stack
@@ -367,9 +367,9 @@ netstat -ano | findstr :3001    # Windows
 lsof -i :3001                   # Linux/Mac
 ```
 
-## 🚀 High Availability (HA) - Komplettübersicht
+## High Availability (HA) - Komplettübersicht
 
-### 🏗️ HA-Architektur im Detail
+### HA-Architektur im Detail
 
 **Container-Setup (8 Container total):**
 - **nginx-lb**: Load Balancer (Ports 80, 3001)
@@ -381,7 +381,7 @@ lsof -i :3001                   # Linux/Mac
 - **discordgym-ui**: Angular Frontend (Port 80 intern)
 - **prisma-studio**: DB Admin Interface (Port 5556)
 
-### 📋 HA-Checkliste für Anfänger
+### HA-Checkliste für Anfänger
 
 **Schritt 1: Vorbereitung**
 ```bash
@@ -423,7 +423,7 @@ curl http://localhost:3001/health
 docker-compose -f docker-compose.ha.yml up -d discordgym-api-1
 ```
 
-### 🎯 Was macht das HA-System besonders?
+### Was macht das HA-System besonders?
 
 - **Zero-Downtime**: Service läuft weiter, auch wenn 1-2 Backend-Instanzen ausfallen
 - **Automatic Load Balancing**: NGINX verteilt Traffic gleichmäßig auf alle verfügbaren Backends
@@ -432,7 +432,7 @@ docker-compose -f docker-compose.ha.yml up -d discordgym-api-1
 - **Real-time Chat**: Socket.IO funktioniert über alle Instanzen hinweg
 - **Enterprise-Ready**: Production-grade Setup mit Monitoring und Logging
 
-### 🔧 HA-Befehle Übersicht
+### HA-Befehle Übersicht
 
 ```bash
 # HA starten
