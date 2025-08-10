@@ -17,7 +17,7 @@ export interface ServerInvite {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="modal-overlay" (click)="onBackdropClick($event)">
+    <div *ngIf="isVisible" class="modal-overlay" (click)="onBackdropClick($event)">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <h3>Server-Einladungen verwalten</h3>
         

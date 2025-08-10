@@ -56,4 +56,4 @@ EXPOSE 3000
 
 # Start the application with database initialization
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "npx prisma db push && npx prisma generate && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma db push && npx prisma generate && node dist/src/main.js"]

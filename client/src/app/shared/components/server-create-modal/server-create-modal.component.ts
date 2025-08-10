@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="modal-overlay" (click)="onBackdropClick($event)">
+    <div *ngIf="isVisible" class="modal-overlay" (click)="onBackdropClick($event)">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <h3>Neuen Server erstellen</h3>
         

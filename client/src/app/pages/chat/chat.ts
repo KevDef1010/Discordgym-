@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -82,7 +82,7 @@ interface DirectMessage {
   templateUrl: './chat.html',
   styleUrl: './chat.scss'
 })
-export class ChatComponent implements OnInit, OnDestroy {
+export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
   // Component state
   activeTab: 'direct' | 'servers' = 'direct';
   currentUser: User | null = null;
@@ -146,29 +146,52 @@ export class ChatComponent implements OnInit, OnDestroy {
     private socketService: SocketService,
     private chatService: ChatService,
     private router: Router
-  ) {}
+  ) {
+    // FORCE all modal states to false in constructor
+    this.showServerModal = false;
+    this.showChannelModal = false;
+    this.showFriendChatModal = false;
+    this.showInviteModal = false;
+    this.showJoinServerModal = false;
+    
+    console.log('🔒 Constructor: All modals set to FALSE');
+  }
 
   ngOnInit(): void {
-    // Reset all modal states to ensure clean start
+    console.log('🔄 Chat component ngOnInit started');
+    
+    // TRIPLE RESET to ensure no modals are open
     this.resetModalStates();
+    this.resetModalStates();
+    this.resetModalStates();
+    
+    // Force explicit reset
+    this.showServerModal = false;
+    this.showChannelModal = false;
+    this.showFriendChatModal = false;
+    this.showInviteModal = false;
+    this.showJoinServerModal = false;
+    
+    console.log('� All modal states FORCE RESET - checking states:');
+    console.log('showServerModal:', this.showServerModal);
+    console.log('showChannelModal:', this.showChannelModal);
+    console.log('showFriendChatModal:', this.showFriendChatModal);
+    console.log('showInviteModal:', this.showInviteModal);
+    console.log('showJoinServerModal:', this.showJoinServerModal);
     
     // Get user once directly without subscribing
     this.currentUser = this.authService.getCurrentUser();
     
     if (!this.currentUser) {
-      // Temporary fallback for testing - use a test user
-      this.currentUser = {
-        id: 'cme2ud8l10000fa4sdnq79fs9', // FitnessKing test user
-        username: 'FitnessKing',
-        email: 'king@discordgym.com',
-        avatar: 'https://example.com/avatar1.png',
-        discordId: '111111111111111111',
-        role: 'MEMBER',
-        isActive: true,
-        createdAt: '2025-08-08T13:08:21.302Z'
-      };
-      console.log('Using test user for chat functionality:', this.currentUser);
+      console.error('❌ No user found, redirecting to login');
+      this.router.navigate(['/login']);
+      return;
     }
+    
+    console.log('✅ Current user found:', this.currentUser.username);
+    
+    // Always start with direct messages tab
+    this.activeTab = 'direct';
     
     // Clear URL parameters first thing to prevent loops
     const url = new URL(window.location.href);
@@ -182,10 +205,15 @@ export class ChatComponent implements OnInit, OnDestroy {
     
     // Load data first
     this.loadChatData().then(() => {
+      console.log('✅ Chat data loaded successfully');
+      // FINAL modal reset after data loading
+      this.resetModalStates();
       // Then handle direct message parameters if they exist
       if (dmUserId && dmUsername && dmUserId !== this.currentUser?.id) {
         this.handleDirectMessageFromUrl(dmUserId, dmUsername);
       }
+    }).catch(error => {
+      console.error('❌ Error loading chat data:', error);
     });
     
     // Set up socket listeners
@@ -239,18 +267,38 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.leaveCurrentRoom();
   }
 
+  ngAfterViewInit(): void {
+    // FINAL modal reset after view is rendered
+    console.log('🎯 ngAfterViewInit - FINAL modal reset');
+    setTimeout(() => {
+      this.showServerModal = false;
+      this.showChannelModal = false;
+      this.showFriendChatModal = false;
+      this.showInviteModal = false;
+      this.showJoinServerModal = false;
+      console.log('🔒 AfterViewInit: All modals FORCEFULLY closed');
+    }, 0);
+  }
+
   private async loadChatData(): Promise<void> {
     if (!this.currentUser) return;
     
     try {
       this.isLoading = true;
+      console.log('🔄 Loading chat data for user:', this.currentUser.username);
+      
+      // Load direct messages first (most important)
+      await this.loadDirectMessages();
       
       // Load user's servers
-      const servers = await this.chatService.getUserServers();
-      this.chatServers = servers as ChatServer[];
-      
-      // Load direct messages
-      await this.loadDirectMessages();
+      try {
+        const servers = await this.chatService.getUserServers();
+        this.chatServers = servers as ChatServer[];
+        console.log('🏢 Loaded servers:', this.chatServers.length);
+      } catch (error) {
+        console.error('❌ Error loading servers:', error);
+        this.chatServers = [];
+      }
       
       // Get online users (simplified approach)
       this.socketService.onlineUsers$.subscribe(users => {
@@ -260,8 +308,10 @@ export class ChatComponent implements OnInit, OnDestroy {
       // Connect to chat socket and join chat
       this.connectToChat();
       
+      console.log('✅ Chat data loading completed');
+      
     } catch (error) {
-      console.error('Error loading chat data:', error);
+      console.error('❌ Error loading chat data:', error);
     } finally {
       this.isLoading = false;
     }
@@ -331,17 +381,49 @@ export class ChatComponent implements OnInit, OnDestroy {
     if (!this.currentUser) return;
     
     try {
+      console.log('📱 Loading direct messages...');
+      
+      // Load friends first
       const friends = await this.chatService.getFriends();
-      this.directMessages = (friends as any[]).map((friend: any) => ({
-        userId: friend.id,
-        username: friend.username,
-        avatar: friend.avatar,
-        lastMessage: friend.lastMessage?.content,
-        lastMessageTime: friend.lastMessage?.createdAt,
-        unreadCount: 0
-      }));
+      console.log('👥 Friends loaded:', friends);
+      
+      if (Array.isArray(friends) && friends.length > 0) {
+        this.directMessages = friends.map((friend: any) => ({
+          userId: friend.id,
+          username: friend.username,
+          avatar: friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.username}`,
+          lastMessage: friend.lastMessage?.content,
+          lastMessageTime: friend.lastMessage?.createdAt ? new Date(friend.lastMessage.createdAt) : undefined,
+          unreadCount: 0
+        }));
+        
+        console.log('✅ Direct messages initialized:', this.directMessages.length, 'chats');
+      } else {
+        console.log('📭 No friends found, empty direct messages list');
+        this.directMessages = [];
+        
+        // For testing - add a test conversation
+        this.directMessages.push({
+          userId: 'test-user-123',
+          username: 'TestUser',
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=TestUser',
+          unreadCount: 0
+        });
+        console.log('🧪 Added test user for development');
+      }
+      
+      // Also load available friends for new chats
+      this.availableFriends = friends || [];
+      
     } catch (error) {
-      console.error('Error loading direct messages:', error);
+      console.error('❌ Error loading direct messages:', error);
+      // Fallback: add a test conversation for development
+      this.directMessages = [{
+        userId: 'test-user-123',
+        username: 'TestUser',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=TestUser',
+        unreadCount: 0
+      }];
     }
   }
 
@@ -948,6 +1030,8 @@ export class ChatComponent implements OnInit, OnDestroy {
   }
 
   private resetModalStates(): void {
+    console.log('🔒 Resetting ALL modal states to false');
+    
     // Reset all modal states to ensure clean start
     this.showServerModal = false;
     this.showChannelModal = false;
@@ -960,5 +1044,17 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.isJoiningServer = false;
     this.isLoadingInvitePreview = false;
     this.isCreatingInvite = false;
+    
+    // Clear form data
+    this.newServerName = '';
+    this.newServerDescription = '';
+    this.newServerPrivate = false;
+    this.newChannelName = '';
+    this.newChannelDescription = '';
+    this.newChannelPrivate = false;
+    this.createdInviteCode = '';
+    this.serverInvites = [];
+    
+    console.log('✅ All modal states reset - should show chat interface now');
   }
 }
