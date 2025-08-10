@@ -1,3 +1,16 @@
+/**
+ * Application Routes Configuration
+ * 
+ * Defines the routing structure for the DiscordGym application.
+ * Includes route guards for authentication and authorization.
+ * 
+ * Route Guards:
+ * - AuthGuard: Protects routes that require authentication
+ * - GuestGuard: Redirects authenticated users away from public routes
+ * - AdminGuard: Restricts access to admin-only routes
+ * 
+ * @author DiscordGym Team
+ */
 import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
 import { Login } from './pages/login/login';
@@ -13,17 +26,22 @@ import { AuthGuard, GuestGuard } from './shared/guards/auth.guard';
 import { AdminGuard } from './shared/guards/admin.guard';
 
 export const routes: Routes = [
+  // Home route - public landing page for non-authenticated users
   { 
     path: '', 
     component: Home,
     title: 'DiscordGym - Transform your Discord into a Fitness Community',
-    canActivate: [GuestGuard]
+    canActivate: [GuestGuard] // Redirect authenticated users to dashboard
   },
+  
+  // Home redirect for explicit /home requests
   { 
     path: 'home', 
     redirectTo: '',
     pathMatch: 'full'
   },
+  
+  // Authentication routes
   {
     path: 'login',
     component: Login,

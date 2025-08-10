@@ -1,3 +1,17 @@
+/**
+ * DiscordGym Chat Component
+ * 
+ * Main component handling real-time chat functionality.
+ * Supports direct messages, server channels, notifications, and read tracking.
+ * 
+ * Key Features:
+ * - Real-time messaging via WebSockets
+ * - Direct message conversations
+ * - Server-based channels
+ * - Desktop notifications
+ * - Read message persistence
+ * - Unread message counters
+ */
 import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -12,7 +26,11 @@ import {
   JoinServerModalComponent 
 } from '../../shared/components';
 
-// Simplified interfaces for the component
+// Interface definitions for the chat system
+
+/**
+ * Represents a chat server (like Discord servers)
+ */
 interface ChatServer {
   id: string;
   name: string;
@@ -26,6 +44,9 @@ interface ChatServer {
   };
 }
 
+/**
+ * Represents a channel within a server
+ */
 interface ChatChannel {
   id: string;
   name: string;
@@ -33,6 +54,9 @@ interface ChatChannel {
   isPrivate: boolean;
 }
 
+/**
+ * Represents a chat message
+ */
 interface ChatMessage {
   id: string;
   content: string;
@@ -61,6 +85,9 @@ interface MessageReaction {
   };
 }
 
+/**
+ * Represents a direct message conversation
+ */
 interface DirectMessage {
   userId: string;
   username: string;
@@ -70,6 +97,9 @@ interface DirectMessage {
   unreadCount: number;
 }
 
+/**
+ * Represents a notification for new messages
+ */
 interface MessageNotification {
   id: string;
   username: string;
@@ -95,99 +125,102 @@ interface MessageNotification {
   styleUrl: './chat.scss'
 })
 export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
-  // Component state
-  activeTab: 'direct' | 'servers' = 'direct';
-  currentUser: User | null = null;
-  isLoading = false;
+  // ===== COMPONENT STATE =====
+  activeTab: 'direct' | 'servers' = 'direct'; // Current active tab (direct messages or servers)
+  currentUser: User | null = null; // Currently authenticated user
+  isLoading = false; // Loading state for UI feedback
   
-  // Chat data
-  chatServers: ChatServer[] = [];
-  directMessages: DirectMessage[] = [];
+  // ===== CHAT DATA =====
+  chatServers: ChatServer[] = []; // List of servers user belongs to
+  directMessages: DirectMessage[] = []; // List of direct message conversations
   availableFriends: any[] = []; // All friends available for new chats
-  messages: ChatMessage[] = [];
-  onlineUsers: OnlineUser[] = [];
-  typingUsers: string[] = [];
+  messages: ChatMessage[] = []; // Current conversation messages
+  onlineUsers: OnlineUser[] = []; // List of currently online users
+  typingUsers: string[] = []; // Users currently typing in active chat
   
-  // Selected items
-  selectedServer: ChatServer | null = null;
-  selectedChannel: ChatChannel | null = null;
-  selectedDirectMessage: DirectMessage | null = null;
+  // ===== SELECTED ITEMS =====
+  selectedServer: ChatServer | null = null; // Currently selected server
+  selectedChannel: ChatChannel | null = null; // Currently selected channel
+  selectedDirectMessage: DirectMessage | null = null; // Currently selected direct message
   
-  // Message input
-  newMessage = '';
+  // ===== MESSAGE INPUT =====
+  newMessage = ''; // Content of message being typed
   
-  // Notification system
-  totalUnreadCount = 0;
-  originalFaviconHref = '';
-  notificationAudio: HTMLAudioElement | null = null;
-  recentNotifications: MessageNotification[] = [];
+  // ===== NOTIFICATION SYSTEM =====
+  totalUnreadCount = 0; // Total number of unread messages across all chats
+  originalFaviconHref = ''; // Original favicon URL for restoration
+  notificationAudio: HTMLAudioElement | null = null; // Audio element for notification sounds
+  recentNotifications: MessageNotification[] = []; // Queue of recent notifications
   
-  // Read message tracking
-  private readMessages: Set<string> = new Set(); // Store read message IDs
-  private readonly READ_MESSAGES_KEY = 'discordGym_readMessages';
+  // ===== READ MESSAGE TRACKING =====
+  private readMessages: Set<string> = new Set(); // Store read message IDs for persistence
+  private readonly READ_MESSAGES_KEY = 'discordGym_readMessages'; // localStorage key
   private readonly MAX_READ_MESSAGES = 1000; // Limit to prevent localStorage bloat
   
-  // Modal states
-  showServerModal = false;
-  showChannelModal = false;
-  showFriendChatModal = false;
-  showInviteModal = false;
-  showJoinServerModal = false;
+  // ===== MODAL STATES =====
+  showServerModal = false; // Create new server modal
+  showChannelModal = false; // Create new channel modal
+  showFriendChatModal = false; // Start chat with friend modal
+  showInviteModal = false; // Create server invite modal
+  showJoinServerModal = false; // Join server via invite modal
   
-  // Loading states
-  isCreatingServer = false;
-  isJoiningServer = false;
-  isLoadingInvitePreview = false;
-  isCreatingInvite = false;
+  // ===== LOADING STATES =====
+  isCreatingServer = false; // Server creation in progress
+  isJoiningServer = false; // Server join in progress
+  isLoadingInvitePreview = false; // Loading invite preview
+  isCreatingInvite = false; // Invite creation in progress
   
-  // New server/channel form data
-  newServerName = '';
-  newServerDescription = '';
-  newServerPrivate = false;
-  newChannelName = '';
-  newChannelDescription = '';
-  newChannelPrivate = false;
+  // ===== FORM DATA =====
+  newServerName = ''; // New server name input
+  newServerDescription = ''; // New server description input
+  newServerPrivate = false; // New server privacy setting
+  newChannelName = ''; // New channel name input
+  newChannelDescription = ''; // New channel description input
+  newChannelPrivate = false; // New channel privacy setting
 
-  // Invite system
-  serverInvites: any[] = [];
-  newInviteMaxUses?: number;
-  newInviteExpiresHours?: number;
-  createdInviteCode = '';
+  // ===== INVITE SYSTEM =====
+  serverInvites: any[] = []; // List of server invites
+  newInviteMaxUses?: number; // Maximum uses for new invite
+  newInviteExpiresHours?: number; // Expiration time for new invite
+  createdInviteCode = ''; // Generated invite code
   
-  // Pagination and infinite scroll
+  // ===== PAGINATION AND INFINITE SCROLL =====
   messageLimit = 20; // Messages per page
-  currentPage = 0;
-  hasMoreMessages = true;
-  isLoadingMoreMessages = false;
+  currentPage = 0; // Current page for pagination
+  hasMoreMessages = true; // Whether more messages are available
+  isLoadingMoreMessages = false; // Loading state for pagination
   
-  // Subscriptions
-  private subscriptions: Subscription[] = [];
-  private typingTimeout: any;
-  private autoRefreshInterval: any;
-  private lastMessageCount = 0;
-  private readonly CHAT_STATE_KEY = 'discordGym_chatState';
-  private readonly AUTO_REFRESH_INTERVAL = 10000; // 10 seconds
+  // ===== PRIVATE PROPERTIES =====
+  private subscriptions: Subscription[] = []; // RxJS subscriptions for cleanup
+  private typingTimeout: any; // Timeout for typing indicator
+  private autoRefreshInterval: any; // Interval for auto-refreshing messages
+  private lastMessageCount = 0; // Last known message count for refresh detection
+  private readonly CHAT_STATE_KEY = 'discordGym_chatState'; // localStorage key for chat state
+  private readonly AUTO_REFRESH_INTERVAL = 10000; // Auto-refresh interval (10 seconds)
 
+  /**
+   * Constructor - Initialize services and reset modal states
+   */
   constructor(
     private authService: AuthService,
     private socketService: SocketService,
     private chatService: ChatService,
     private router: Router
   ) {
-    // FORCE all modal states to false in constructor
+    // Ensure all modal states are false on component creation
     this.showServerModal = false;
     this.showChannelModal = false;
     this.showFriendChatModal = false;
     this.showInviteModal = false;
     this.showJoinServerModal = false;
-    
-    console.log('🔒 Constructor: All modals set to FALSE');
   }
 
+  /**
+   * Component initialization lifecycle hook
+   * Sets up the chat system, loads user data, and initializes real-time connections
+   */
   ngOnInit(): void {
-    console.log('🔄 Chat component ngOnInit started');
-    
-    // Initialize notification system
+    // Initialize notification system for desktop notifications and sounds
     this.initializeNotificationSystem();
     
     // TRIPLE RESET to ensure no modals are open

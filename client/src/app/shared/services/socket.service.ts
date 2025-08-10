@@ -1,8 +1,29 @@
+/**
+ * Socket Service
+ * 
+ * Manages real-time WebSocket connections for the chat application.
+ * Handles bi-directional communication between client and server for:
+ * - Real-time messaging
+ * - User presence updates
+ * - Typing indicators
+ * - Online/offline status
+ * 
+ * Features:
+ * - Automatic connection management
+ * - Event-based messaging system
+ * - User presence tracking
+ * - Connection state monitoring
+ * - Error handling and reconnection
+ * 
+ * @author DiscordGym Team
+ */
 import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { BehaviorSubject, Observable } from 'rxjs';
 
-// Kompatible Interfaces für bestehende Komponenten
+/**
+ * Interface representing an online user with presence information
+ */
 export interface OnlineUser {
   id: number;
   userId: number;
@@ -15,6 +36,9 @@ export interface OnlineUser {
   lastActivity?: Date | string;
 }
 
+/**
+ * Interface representing a chat message with sender information
+ */
 export interface ChatMessage {
   id: number;
   content: string;
@@ -43,6 +67,9 @@ export interface ChatMessage {
   };
 }
 
+/**
+ * Interface representing a direct message between two users
+ */
 export interface DirectMessage {
   id: number;
   content: string;

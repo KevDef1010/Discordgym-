@@ -1,11 +1,37 @@
+/**
+ * Chat Service
+ *
+ * Core service for managing chat functionality including servers, channels,
+ * messages, direct messaging, and real-time communication features.
+ *
+ * Features:
+ * - Server management (create, join, leave)
+ * - Channel operations (create, manage, permissions)
+ * - Message handling (send, retrieve, reactions)
+ * - Direct messaging between users
+ * - Server invitations and member management
+ * - Message reactions and interactions
+ * - User online status tracking
+ * - Comprehensive permission system
+ *
+ * @author DiscordGym Team
+ */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ChatService {
+  /**
+   * Constructor - Initialize chat service
+   * @param prisma - Prisma service for database operations
+   */
   constructor(private prisma: PrismaService) {}
 
-  // Get user's servers
+  /**
+   * Get all servers that a user is a member of
+   * @param userId - ID of the user
+   * @returns Array of servers with channels and member counts
+   */
   async getUserServers(userId: string) {
     return this.prisma.chatServer.findMany({
       where: {
@@ -26,7 +52,11 @@ export class ChatService {
     });
   }
 
-  // Create new server
+  /**
+   * Create a new chat server with owner and default channel
+   * @param data - Server creation data
+   * @returns Created server with channels and member count
+   */
   async createServer(data: {
     name: string;
     description?: string;
@@ -66,7 +96,11 @@ export class ChatService {
     return server;
   }
 
-  // Create new channel
+  /**
+   * Create a new channel within a server
+   * @param data - Channel creation data
+   * @returns Created channel object
+   */
   async createChannel(data: {
     name: string;
     description?: string;
@@ -83,7 +117,11 @@ export class ChatService {
     });
   }
 
-  // Get channel messages
+  /**
+   * Retrieve messages from a specific channel with sender information
+   * @param channelId - ID of the channel
+   * @returns Array of messages with sender details and reactions
+   */
   async getChannelMessages(channelId: string) {
     return this.prisma.chatMessage.findMany({
       where: {

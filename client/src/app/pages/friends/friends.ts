@@ -1,3 +1,20 @@
+/**
+ * Friends Component
+ * 
+ * Comprehensive friends management system with real-time features.
+ * Handles friend relationships, user search, friend requests, and online presence.
+ * 
+ * Features:
+ * - Friends list with online status
+ * - User search with debounced input
+ * - Friend request management (send/receive/accept/decline)
+ * - Real-time notifications via WebSocket
+ * - Online presence and status management
+ * - Direct message integration
+ * - Friend statistics and activity tracking
+ * 
+ * @author DiscordGym Team
+ */
 /* eslint-disable prettier/prettier */
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -16,38 +33,34 @@ import { Router } from '@angular/router';
   styleUrls: ['./friends.scss']
 })
 export class FriendsComponent implements OnInit, OnDestroy {
-  // Aktueller User (aus Authentication Service)
-  currentUserId: string | null = null;
+  // ===== USER AUTHENTICATION =====
+  currentUserId: string | null = null; // Current authenticated user ID
 
-  // Socket.IO Subscriptions
-  private socketSubscriptions: Subscription[] = [];
+  // ===== REAL-TIME SOCKET CONNECTIONS =====
+  private socketSubscriptions: Subscription[] = []; // Socket subscription cleanup
+  notifications: SocketNotification[] = []; // Real-time notification queue
+  onlineUsers: OnlineUser[] = []; // List of currently online users
+  currentUserStatus: 'ONLINE' | 'AWAY' | 'DO_NOT_DISTURB' = 'ONLINE'; // User's current status
+  showStatusSelector = false; // Status selector dropdown visibility
+  isSocketConnected = false; // Socket connection state indicator
 
-  // Real-time Notifications
-  notifications: SocketNotification[] = [];
+  // ===== TAB NAVIGATION =====
+  activeTab: 'friends' | 'search' | 'requests' = 'friends'; // Current active tab
 
-  // Enhanced Online Status
-  onlineUsers: OnlineUser[] = [];
-  currentUserStatus: 'ONLINE' | 'AWAY' | 'DO_NOT_DISTURB' = 'ONLINE';
-  showStatusSelector = false;
-  isSocketConnected = false;
+  // ===== FRIENDS MANAGEMENT =====
+  friends: Friend[] = []; // User's friend list
+  friendsLoading = false; // Loading state for friends list
 
-  // Tabs
-  activeTab: 'friends' | 'search' | 'requests' = 'friends';
+  // ===== USER SEARCH FUNCTIONALITY =====
+  searchQuery = ''; // Current search input
+  searchResults: UserSearchResult[] = []; // Search results from API
+  searchLoading = false; // Loading state for search operations
+  private searchSubject = new Subject<string>(); // Debounced search input stream
 
-  // Freunde
-  friends: Friend[] = [];
-  friendsLoading = false;
-
-  // Suche
-  searchQuery = '';
-  searchResults: UserSearchResult[] = [];
-  searchLoading = false;
-  private searchSubject = new Subject<string>();
-
-  // Anfragen
-  pendingRequests: FriendRequest[] = [];
-  sentRequests: FriendRequest[] = [];
-  requestsLoading = false;
+  // ===== FRIEND REQUESTS =====
+  pendingRequests: FriendRequest[] = []; // Incoming friend requests
+  sentRequests: FriendRequest[] = []; // Outgoing friend requests
+  requestsLoading = false; // Loading state for request operations
 
   // Loading States für einzelne Aktionen
   sendingRequests = new Set<string>(); // Set von User IDs für die gerade Anfragen gesendet werden

@@ -1,3 +1,18 @@
+/**
+ * Dashboard Component
+ * 
+ * Main dashboard view for authenticated users displaying fitness statistics,
+ * recent activities, and quick navigation to key features.
+ * 
+ * Features:
+ * - User fitness statistics overview
+ * - Recent workout history
+ * - Active challenge progress
+ * - Quick navigation to main features
+ * - Responsive layout with activity cards
+ * 
+ * @author DiscordGym Team
+ */
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
@@ -10,40 +25,50 @@ import { AuthService, User } from '../../shared/services/auth.service';
   styleUrl: './dashboard.scss'
 })
 export class Dashboard implements OnInit {
-  currentUser: User | null = null;
+  // User authentication state
+  currentUser: User | null = null; // Currently authenticated user data
   
-  // Dashboard stats (mock data for now)
+  // Dashboard statistics (mock data for demonstration)
   stats = {
-    totalWorkouts: 15,
-    weeklyGoal: 4,
-    currentStreak: 7,
-    totalChallenges: 3
+    totalWorkouts: 15, // Total completed workouts
+    weeklyGoal: 4, // Weekly workout goal
+    currentStreak: 7, // Current workout streak in days
+    totalChallenges: 3 // Number of active challenges
   };
 
+  // Recent workout history for quick overview
   recentWorkouts = [
     { name: 'Push Day', date: '2025-01-20', duration: '45 min', exercises: 8 },
     { name: 'Leg Day', date: '2025-01-18', duration: '60 min', exercises: 6 },
     { name: 'Pull Day', date: '2025-01-16', duration: '50 min', exercises: 7 }
   ];
 
+  // Active challenges with progress tracking
   activeChallenges = [
     { name: '30-Day Push-up Challenge', progress: 65, daysLeft: 15 },
     { name: 'Weekly Cardio Goal', progress: 80, daysLeft: 3 },
     { name: 'Protein Intake Challenge', progress: 90, daysLeft: 2 }
   ];
 
+  /**
+   * Constructor - Initialize dashboard component
+   * @param authService - Authentication service for user data
+   * @param router - Angular router for navigation
+   */
   constructor(
     private authService: AuthService,
     private router: Router
   ) {}
 
+  /**
+   * Component initialization lifecycle hook
+   * Loads user data and validates authentication state
+   */
   ngOnInit(): void {
-    // Instead of subscribing to the Observable which can trigger multiple times,
-    // just check the current authentication state once
+    // Get current authentication state (single check, not subscription)
     this.currentUser = this.authService.getCurrentUser();
     
-    // If not logged in, navigate to login page
-    // Note: The AuthGuard should already prevent this component from loading if not authenticated
+    // Redirect to login if not authenticated (backup check, AuthGuard should handle this)
     if (!this.currentUser) {
       this.router.navigate(['/login']);
       return;

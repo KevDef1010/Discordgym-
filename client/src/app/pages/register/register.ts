@@ -1,3 +1,20 @@
+/**
+ * Register Component
+ * 
+ * Handles user registration with comprehensive form validation.
+ * Provides account creation functionality with password confirmation,
+ * terms acceptance, and detailed error handling.
+ * 
+ * Features:
+ * - Reactive form with advanced validation
+ * - Password confirmation matching
+ * - Password visibility toggles
+ * - Terms and conditions acceptance
+ * - Avatar generation with user initials
+ * - Automatic redirection after registration
+ * 
+ * @author DiscordGym Team
+ */
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -11,13 +28,20 @@ import { AuthService, RegisterDto } from '../../shared/services/auth.service';
   styleUrl: './register.scss'
 })
 export class Register {
-  registerForm: FormGroup;
-  showPassword = false;
-  showConfirmPassword = false;
-  isLoading = false;
-  errorMessage = '';
-  successMessage = '';
+  // Form and UI state
+  registerForm: FormGroup; // Reactive form for registration data
+  showPassword = false; // Toggle for password visibility
+  showConfirmPassword = false; // Toggle for confirm password visibility
+  isLoading = false; // Loading state during registration
+  errorMessage = ''; // Error message display
+  successMessage = ''; // Success message display
 
+  /**
+   * Constructor - Initialize the registration component
+   * @param fb - Angular FormBuilder for reactive forms
+   * @param router - Angular Router for navigation
+   * @param authService - Authentication service for registration operations
+   */
   constructor(
     private fb: FormBuilder,
     private router: Router,
@@ -26,20 +50,30 @@ export class Register {
     this.registerForm = this.createForm();
   }
 
+  /**
+   * Creates the reactive form with comprehensive validation rules
+   * @returns FormGroup with all registration fields and custom validators
+   */
   private createForm(): FormGroup {
     return this.fb.group({
-      username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(20)]],
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
-      confirmPassword: ['', [Validators.required]],
-      acceptTerms: [false, [Validators.requiredTrue]]
-    }, { validators: this.passwordMatchValidator });
+      username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(20)]], // Username with length validation
+      email: ['', [Validators.required, Validators.email]], // Email field with format validation
+      password: ['', [Validators.required, Validators.minLength(6)]], // Password with min length requirement
+      confirmPassword: ['', [Validators.required]], // Password confirmation field
+      acceptTerms: [false, [Validators.requiredTrue]] // Terms acceptance (required)
+    }, { validators: this.passwordMatchValidator }); // Apply custom password matching validator
   }
 
+  /**
+   * Custom validator to ensure password and confirm password match
+   * @param form - The FormGroup containing password fields
+   * @returns null (validation handled by setting field errors directly)
+   */
   private passwordMatchValidator(form: FormGroup) {
     const password = form.get('password');
     const confirmPassword = form.get('confirmPassword');
     
+    // Check if passwords match and set error accordingly
     if (password && confirmPassword && password.value !== confirmPassword.value) {
       confirmPassword.setErrors({ passwordMismatch: true });
     } else if (confirmPassword?.hasError('passwordMismatch')) {

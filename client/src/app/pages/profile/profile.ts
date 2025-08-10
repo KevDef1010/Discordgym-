@@ -1,10 +1,26 @@
+/**
+ * Profile Component
+ * 
+ * User profile management component for viewing and editing user information.
+ * Provides comprehensive profile management including personal data, server invites,
+ * and account deletion functionality.
+ * 
+ * Features:
+ * - Personal information editing (username, email, Discord ID, avatar)
+ * - Server invitation management (view, accept, decline)
+ * - Account deletion with confirmation
+ * - Form validation and error handling
+ * - Real-time feedback for user actions
+ * 
+ * @author DiscordGym Team
+ */
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService, User } from '../../shared/services/auth.service';
 import { ButtonComponent } from '../../shared/components/button/button';
-import { ChatService } from '../../shared/services/chat.service';
+import { ChatService, ServerInvite } from '../../shared/services/chat.service';
 
 @Component({
   selector: 'app-profile',
@@ -14,30 +30,47 @@ import { ChatService } from '../../shared/services/chat.service';
   styleUrls: ['./profile.scss']
 })
 export class ProfileComponent implements OnInit {
-  profileForm: FormGroup;
-  currentUser: User | null = null;
-  isLoading = false;
-  successMessage = '';
-  errorMessage = '';
+  // Profile form management
+  profileForm: FormGroup; // Reactive form for profile editing
+  
+  // User authentication state
+  currentUser: User | null = null; // Currently authenticated user
+  
+  // UI state management
+  isLoading = false; // Loading state for form submissions
+  successMessage = ''; // Success feedback message
+  errorMessage = ''; // Error feedback message
 
-  // Invites section
-  userInvites: any[] = [];
-  invitesLoading = false;
+  // Server invitations management
+  userInvites: ServerInvite[] = []; // List of pending server invitations
+  invitesLoading = false; // Loading state for invites section
 
+  /**
+   * Constructor - Initialize profile component
+   * @param fb - Angular FormBuilder for reactive forms
+   * @param authService - Authentication service for user operations
+   * @param router - Angular router for navigation
+   * @param chatService - Chat service for server operations
+   */
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
     private chatService: ChatService
   ) {
+    // Initialize profile form with validation rules
     this.profileForm = this.fb.group({
-      username: ['', [Validators.required, Validators.minLength(3)]],
-      email: ['', [Validators.required, Validators.email]],
-      discordId: ['', Validators.required],
-      avatar: ['']
+      username: ['', [Validators.required, Validators.minLength(3)]], // Username with min length
+      email: ['', [Validators.required, Validators.email]], // Email with format validation
+      discordId: ['', Validators.required], // Discord ID required
+      avatar: [''] // Avatar URL (optional)
     });
   }
 
+  /**
+   * Component initialization lifecycle hook
+   * Loads current user data and populates the profile form
+   */
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     if (!this.currentUser) {
@@ -45,7 +78,7 @@ export class ProfileComponent implements OnInit {
       return;
     }
 
-    // Populate form with current user data
+    // Populate form with current user data for editing
     this.profileForm.patchValue({
       username: this.currentUser.username,
       email: this.currentUser.email,
@@ -53,10 +86,14 @@ export class ProfileComponent implements OnInit {
       avatar: this.currentUser.avatar
     });
 
-    // Load user invites
+    // Load pending server invitations
     this.loadUserInvites();
   }
 
+  /**
+   * Handle profile form submission
+   * Validates form data and updates user profile information
+   */
   onSubmit(): void {
     if (this.profileForm.valid && this.currentUser) {
       this.isLoading = true;
@@ -68,29 +105,35 @@ export class ProfileComponent implements OnInit {
         id: this.currentUser.id
       };
 
-      // Here you would call your API to update the user
-      // For now, just simulate success
+      // TODO: Replace with actual API call
+      // For now, just simulate success response
       setTimeout(() => {
         this.isLoading = false;
         this.successMessage = 'Profil erfolgreich aktualisiert!';
         
-        // Update local user data
+        // Update local user data (temporary until API integration)
         const updatedUser = { ...this.currentUser!, ...this.profileForm.value };
-        // You would normally get this from the API response
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
         
       }, 1000);
     }
   }
 
+  /**
+   * Cancel profile editing and return to dashboard
+   */
   onCancel(): void {
     this.router.navigate(['/dashboard']);
   }
 
+  /**
+   * Handle account deletion with confirmation prompts
+   * Requires double confirmation to prevent accidental deletion
+   */
   onDeleteAccount(): void {
     if (confirm('Sind Sie sicher, dass Sie Ihr Konto löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.')) {
       if (confirm('Geben Sie zur Bestätigung "LÖSCHEN" ein:')) {
-        // Show loading state
+        // Show loading state during deletion process
         this.isLoading = true;
         this.errorMessage = '';
         this.successMessage = '';
@@ -100,7 +143,7 @@ export class ProfileComponent implements OnInit {
             this.successMessage = 'Ihr Konto wird gelöscht...';
             this.isLoading = false;
             
-            // Redirect to account deleted page
+            // Navigate to account deleted confirmation page
             setTimeout(() => {
               this.router.navigate(['/account-deleted']);
             }, 1000);
@@ -115,19 +158,27 @@ export class ProfileComponent implements OnInit {
     }
   }
   
+  /**
+   * Navigate to chat interface
+   * Provides quick access to chat functionality from profile
+   */
   startChat(): void {
     if (!this.currentUser) return;
     
-    // Instead of trying to chat with yourself, just navigate to the chat page
-    // This prevents the infinite loop issue
+    // Navigate to main chat page instead of trying to chat with self
+    // This prevents infinite loop issues with self-chat attempts
     this.router.navigate(['/chat']);
   }
 
+  /**
+   * Load pending server invitations for the current user
+   * Displays invites that user can accept or decline
+   */
   loadUserInvites(): void {
     if (!this.currentUser) return;
     
     this.invitesLoading = true;
-    this.chatService.getUserInvites().then((invites: any[]) => {
+    this.chatService.getUserInvites().then((invites: ServerInvite[]) => {
       this.userInvites = invites;
       this.invitesLoading = false;
     }).catch((error: any) => {
@@ -136,11 +187,15 @@ export class ProfileComponent implements OnInit {
     });
   }
 
+  /**
+   * Accept a server invitation and join the server
+   * @param inviteCode - Unique invitation code for server access
+   */
   acceptInvite(inviteCode: string): void {
     this.chatService.joinServerByInvite(inviteCode).then((response: any) => {
       this.successMessage = 'Server erfolgreich beigetreten!';
-      this.loadUserInvites(); // Refresh invites
-      // Optionally navigate to the server
+      this.loadUserInvites(); // Refresh invitations list
+      // Clear success message after delay
       setTimeout(() => this.successMessage = '', 3000);
     }).catch((error: any) => {
       this.errorMessage = 'Fehler beim Beitreten des Servers';
@@ -148,9 +203,13 @@ export class ProfileComponent implements OnInit {
     });
   }
 
-  declineInvite(inviteId: number): void {
+  /**
+   * Decline a server invitation
+   * @param inviteId - ID of the invitation to decline
+   */
+  declineInvite(inviteId: string): void {
+    // TODO: Implement server-side decline API call
     // For now, just remove from local list
-    // In a full implementation, you might want to mark as declined on server
     this.userInvites = this.userInvites.filter(invite => invite.id !== inviteId);
   }
 }

@@ -1,9 +1,28 @@
+/**
+ * Authentication Service
+ * 
+ * Handles user authentication, registration, login, logout, and token management.
+ * Provides reactive user state management through RxJS observables.
+ * 
+ * Features:
+ * - JWT token management with localStorage persistence
+ * - User registration and login
+ * - Password reset functionality
+ * - Account deletion
+ * - Real-time user state updates
+ * - Server-side rendering (SSR) compatibility
+ * 
+ * @author DiscordGym Team
+ */
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { isPlatformBrowser } from '@angular/common';
 
+/**
+ * User interface representing authenticated user data
+ */
 export interface User {
   id: string;
   username: string;
@@ -15,12 +34,18 @@ export interface User {
   createdAt: string;
 }
 
+/**
+ * Authentication response from the server
+ */
 export interface AuthResponse {
   user: User;
   token: string;
   message: string;
 }
 
+/**
+ * Data transfer object for user registration
+ */
 export interface RegisterDto {
   discordId?: string;
   username: string;
@@ -29,6 +54,9 @@ export interface RegisterDto {
   avatar?: string;
 }
 
+/**
+ * Data transfer object for user login
+ */
 export interface LoginDto {
   email: string;
   password: string;
@@ -38,13 +66,18 @@ export interface LoginDto {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly API_URL = 'http://localhost:3001';
-  private currentUserSubject = new BehaviorSubject<User | null>(null);
-  public currentUser$ = this.currentUserSubject.asObservable();
+  private readonly API_URL = 'http://localhost:3001'; // Backend API URL
+  private currentUserSubject = new BehaviorSubject<User | null>(null); // Reactive user state
+  public currentUser$ = this.currentUserSubject.asObservable(); // Public observable for components
   
-  // Debug flag to help track auth state changes
+  // Debug counter to track authentication state changes
   private static authStateChangeCount = 0;
 
+  /**
+   * Constructor - Initialize the authentication service
+   * @param http - Angular HTTP client for API calls
+   * @param platformId - Platform identifier for SSR compatibility
+   */
   constructor(
     private http: HttpClient,
     @Inject(PLATFORM_ID) private platformId: Object

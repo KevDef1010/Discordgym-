@@ -1,3 +1,21 @@
+/**
+ * Admin Service
+ *
+ * Administrative service providing comprehensive user management, system statistics,
+ * and platform oversight capabilities for DiscordGym administrators.
+ *
+ * Features:
+ * - User search and filtering with pagination
+ * - Role-based user management and updates
+ * - User account status management (activate/deactivate)
+ * - Secure user deletion with protections
+ * - System statistics and analytics
+ * - User details and activity tracking
+ * - Comprehensive user data retrieval
+ * - Admin-level security validations
+ *
+ * @author DiscordGym Team
+ */
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -9,8 +27,17 @@ import { UserRole } from './dto/admin.dto';
 
 @Injectable()
 export class AdminService {
+  /**
+   * Constructor - Initialize admin service
+   * @param prisma - Prisma service for database operations
+   */
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Find users with search, filtering, and pagination capabilities
+   * @param params - Search and pagination parameters
+   * @returns Paginated user results with counts and metadata
+   */
   async findUsers(params: {
     search?: string;
     role?: string;
@@ -21,6 +48,7 @@ export class AdminService {
     
     const where: any = {};
     
+    // Build search conditions for multiple fields
     if (search) {
       where.OR = [
         { username: { contains: search } },
@@ -29,10 +57,12 @@ export class AdminService {
       ];
     }
     
+    // Filter by specific role if provided
     if (role) {
       where.role = role;
     }
 
+    // Execute parallel queries for users and total count
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
@@ -59,6 +89,11 @@ export class AdminService {
     };
   }
 
+  /**
+   * Search users by query string across multiple fields
+   * @param query - Search query string
+   * @returns Array of matching users with basic information
+   */
   async searchUsers(query: string) {
     const users = await this.prisma.user.findMany({
       where: {
@@ -76,13 +111,18 @@ export class AdminService {
         avatar: true,
         createdAt: true,
       },
-      take: 20,
+      take: 20, // Limit results for performance
       orderBy: { username: 'asc' },
     });
 
     return users;
   }
 
+  /**
+   * Get detailed information about a specific user
+   * @param id - User ID to retrieve details for
+   * @returns Comprehensive user data including workouts and activity
+   */
   async getUserDetails(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },

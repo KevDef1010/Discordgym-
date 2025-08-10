@@ -1,8 +1,27 @@
+/**
+ * Friends Service
+ * 
+ * Handles all friend-related HTTP operations and data management.
+ * Provides comprehensive friend management functionality including
+ * friend requests, user search, and friendship statistics.
+ * 
+ * Features:
+ * - Friend relationship management
+ * - User search with pagination
+ * - Friend request system (send/accept/decline)
+ * - Friendship statistics tracking
+ * - Real-time friend status updates
+ * 
+ * @author DiscordGym Team
+ */
 /* eslint-disable prettier/prettier */
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+/**
+ * Interface representing a friendship relationship
+ */
 export interface Friend {
   id: string;
   status: string;
@@ -16,15 +35,21 @@ export interface Friend {
   };
 }
 
+/**
+ * Interface for user search results
+ */
 export interface UserSearchResult {
   id: string;
   username: string;
   displayId: string | null;
   avatar?: string | null;
   isActive: boolean;
-  friendshipStatus?: string;
+  friendshipStatus?: string; // Current friendship status with the searching user
 }
 
+/**
+ * Interface representing a friend request
+ */
 export interface FriendRequest {
   id: string;
   senderId: string;
@@ -47,6 +72,9 @@ export interface FriendRequest {
   };
 }
 
+/**
+ * Interface for friendship statistics
+ */
 export interface FriendStats {
   friendsCount: number;
   pendingRequestsCount: number;

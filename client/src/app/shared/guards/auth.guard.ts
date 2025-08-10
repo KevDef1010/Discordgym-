@@ -1,7 +1,25 @@
+/**
+ * Authentication Guards
+ * 
+ * Route guards that control access to different parts of the application
+ * based on user authentication status and permissions.
+ * 
+ * Guards included:
+ * - AuthGuard: Protects authenticated-only routes
+ * - GuestGuard: Redirects authenticated users away from public routes
+ * 
+ * @author DiscordGym Team
+ */
 import { Injectable } from '@angular/core';
 import { CanActivate, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
+/**
+ * Authentication Guard
+ * 
+ * Protects routes that require user authentication.
+ * Redirects unauthenticated users to the login page.
+ */
 @Injectable({
   providedIn: 'root'
 })
@@ -14,6 +32,10 @@ export class AuthGuard implements CanActivate {
     private router: Router
   ) {}
 
+  /**
+   * Determines if a route can be activated based on authentication status
+   * @returns true if user is authenticated, false otherwise
+   */
   canActivate(): boolean {
     // Check if the user is logged in
     if (this.authService.isLoggedIn()) {
@@ -25,7 +47,6 @@ export class AuthGuard implements CanActivate {
     // If we're already in the process of redirecting, don't trigger another navigation
     if (!AuthGuard.redirectingToLogin) {
       AuthGuard.redirectingToLogin = true;
-      console.log('AuthGuard: Redirecting to login page');
       
       // Navigate to login and reset flag after navigation completes
       this.router.navigate(['/login']).then(() => {
@@ -40,6 +61,12 @@ export class AuthGuard implements CanActivate {
   }
 }
 
+/**
+ * Guest Guard
+ * 
+ * Redirects authenticated users away from public routes (like login/register)
+ * to prevent access to authentication pages when already logged in.
+ */
 @Injectable({
   providedIn: 'root'
 })

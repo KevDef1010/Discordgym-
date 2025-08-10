@@ -1,8 +1,26 @@
+/**
+ * Chat Service
+ * 
+ * Provides HTTP client functionality for chat-related operations.
+ * Handles server management, channel management, messaging, and friend operations.
+ * 
+ * Features:
+ * - Server creation, joining, and management
+ * - Channel creation and message retrieval
+ * - Direct messaging between users
+ * - Friend management and invitations
+ * - Server invite system
+ * 
+ * @author DiscordGym Team
+ */
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 
+/**
+ * Data transfer object for creating a new server
+ */
 export interface CreateServerDto {
   name: string;
   description?: string;
@@ -10,6 +28,9 @@ export interface CreateServerDto {
   ownerId: string;
 }
 
+/**
+ * Data transfer object for creating a new channel
+ */
 export interface CreateChannelDto {
   name: string;
   description?: string;
@@ -17,6 +38,9 @@ export interface CreateChannelDto {
   serverId: string;
 }
 
+/**
+ * Data transfer object for sending a message
+ */
 export interface SendMessageDto {
   content: string;
   senderId: string;
@@ -25,6 +49,9 @@ export interface SendMessageDto {
   messageType: 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM';
 }
 
+/**
+ * Interface representing a chat server
+ */
 export interface ChatServer {
   id: string;
   name: string;
@@ -46,6 +73,9 @@ export interface ChatServer {
   updatedAt: string;
 }
 
+/**
+ * Interface representing a chat channel
+ */
 export interface ChatChannel {
   id: string;
   name: string;
