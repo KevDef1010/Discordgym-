@@ -21,6 +21,7 @@ import { Router } from '@angular/router';
 import { AuthService, User } from '../../shared/services/auth.service';
 import { ButtonComponent } from '../../shared/components/button/button';
 import { ChatService, ServerInvite } from '../../shared/services/chat.service';
+import { SocketService, OnlineUser } from '../../shared/services/socket.service';
 
 @Component({
   selector: 'app-profile',
@@ -45,18 +46,29 @@ export class ProfileComponent implements OnInit {
   userInvites: ServerInvite[] = []; // List of pending server invitations
   invitesLoading = false; // Loading state for invites section
 
+  // Online status management
+  currentUserStatus = 'OFFLINE'; // Current user's online status
+  availableStatuses = [
+    { value: 'ONLINE', label: 'Online', color: 'green' },
+    { value: 'AWAY', label: 'Abwesend', color: 'yellow' },
+    { value: 'DO_NOT_DISTURB', label: 'Nicht stören', color: 'red' },
+    { value: 'OFFLINE', label: 'Offline', color: 'gray' }
+  ];
+
   /**
    * Constructor - Initialize profile component
    * @param fb - Angular FormBuilder for reactive forms
    * @param authService - Authentication service for user operations
    * @param router - Angular router for navigation
    * @param chatService - Chat service for server operations
+   * @param socketService - Socket service for online status management
    */
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
-    private chatService: ChatService
+    private chatService: ChatService,
+    private socketService: SocketService
   ) {
     // Initialize profile form with validation rules
     this.profileForm = this.fb.group({
@@ -88,6 +100,9 @@ export class ProfileComponent implements OnInit {
 
     // Load pending server invitations
     this.loadUserInvites();
+    
+    // Initialize online status
+    this.initializeOnlineStatus();
   }
 
   /**
@@ -211,5 +226,61 @@ export class ProfileComponent implements OnInit {
     // TODO: Implement server-side decline API call
     // For now, just remove from local list
     this.userInvites = this.userInvites.filter(invite => invite.id !== inviteId);
+    this.successMessage = 'Einladung abgelehnt';
+    setTimeout(() => this.successMessage = '', 3000);
+  }
+
+  // Online Status Management Methods
+
+  /**
+   * Initialize online status tracking
+   * Subscribes to socket status updates and sets initial status
+   */
+  initializeOnlineStatus(): void {
+    // Subscribe to current user status updates
+    this.socketService.currentUserStatus$.subscribe(status => {
+      this.currentUserStatus = status.toUpperCase();
+    });
+
+    // Get initial status
+    this.currentUserStatus = this.socketService.getCurrentUserStatus().toUpperCase();
+  }
+
+  /**
+   * Change user's online status
+   * @param status - New status to set
+   */
+  changeUserStatus(status: string): void {
+    this.socketService.updateStatus(status as any);
+    this.currentUserStatus = status;
+  }
+
+  /**
+   * Get CSS class for status dot based on status
+   * @param status - User status
+   * @returns CSS class string
+   */
+  getStatusDotClass(status: string): string {
+    switch (status) {
+      case 'ONLINE': return 'bg-green-500';
+      case 'AWAY': return 'bg-yellow-500';
+      case 'DO_NOT_DISTURB': return 'bg-red-500';
+      case 'OFFLINE':
+      default: return 'bg-gray-500';
+    }
+  }
+
+  /**
+   * Get display text for status
+   * @param status - User status
+   * @returns Localized status text
+   */
+  getStatusText(status: string): string {
+    switch (status) {
+      case 'ONLINE': return 'Online';
+      case 'AWAY': return 'Abwesend';
+      case 'DO_NOT_DISTURB': return 'Nicht stören';
+      default: return 'Offline';
+    }
   }
 }

@@ -4,14 +4,25 @@
     <div class="bg-white shadow rounded-lg mb-6">
       <div class="px-6 py-4 border-b border-gray-200">
         <div class="flex items-center space-x-4">
-          <img 
-            [src]="currentUser?.avatar || '/monster_icon.jpg'" 
-            [alt]="currentUser?.username"
-            class="h-16 w-16 rounded-full object-cover border-4 border-purple-400"
-          >
-          <div>
+          <div class="relative">
+            <img 
+              [src]="currentUser?.avatar || '/monster_icon.jpg'" 
+              [alt]="currentUser?.username"
+              class="h-16 w-16 rounded-full object-cover border-4 border-purple-400"
+            >
+            <!-- Online Status Indicator -->
+            <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white"
+                 [ngClass]="getStatusDotClass(currentUserStatus)">
+            </div>
+          </div>
+          <div class="flex-1">
             <h1 class="text-2xl font-bold text-gray-900">Profil bearbeiten</h1>
             <p class="text-gray-600">Verwalten Sie Ihre persönlichen Informationen</p>
+            <!-- Current Status Display -->
+            <div class="flex items-center mt-2">
+              <span class="w-2 h-2 rounded-full mr-2" [ngClass]="getStatusDotClass(currentUserStatus)"></span>
+              <span class="text-sm text-gray-500">{{ getStatusText(currentUserStatus) }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -107,6 +118,30 @@
           </div>
           <p class="text-sm text-gray-500 mt-1">
             Rollen können nur von Administratoren geändert werden
+          </p>
+        </div>
+
+        <!-- Online Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Online Status
+          </label>
+          <div class="grid grid-cols-2 gap-3">
+            <button
+              *ngFor="let status of availableStatuses"
+              type="button"
+              (click)="changeUserStatus(status.value)"
+              class="flex items-center justify-center px-4 py-3 border rounded-md transition-colors duration-200"
+              [class]="currentUserStatus === status.value 
+                ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'"
+            >
+              <span class="w-3 h-3 rounded-full mr-2" [ngClass]="getStatusDotClass(status.value)"></span>
+              {{ status.label }}
+            </button>
+          </div>
+          <p class="text-sm text-gray-500 mt-1">
+            Ihr aktueller Status: <strong>{{ getStatusText(currentUserStatus) }}</strong>
           </p>
         </div>
 
