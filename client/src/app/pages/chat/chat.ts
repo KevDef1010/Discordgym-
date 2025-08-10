@@ -145,6 +145,10 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
   // Subscriptions
   private subscriptions: Subscription[] = [];
   private typingTimeout: any;
+  private autoRefreshInterval: any;
+  private lastMessageCount = 0;
+  private readonly CHAT_STATE_KEY = 'discordGym_chatState';
+  private readonly AUTO_REFRESH_INTERVAL = 10000; // 10 seconds
 
   constructor(
     private authService: AuthService,
@@ -216,9 +220,16 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       console.log('✅ Chat data loaded successfully');
       // FINAL modal reset after data loading
       this.resetModalStates();
+      
+      // Restore previous chat state
+      this.restoreChatState();
+      
       // Then handle direct message parameters if they exist
       if (dmUserId && dmUsername && dmUserId !== this.currentUser?.id) {
         this.handleDirectMessageFromUrl(dmUserId, dmUsername);
+      } else {
+        // If no URL params, try to restore the last selected chat
+        this.restoreSelectedChat();
       }
     }).catch(error => {
       console.error('❌ Error loading chat data:', error);
@@ -226,6 +237,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Set up socket listeners
     this.setupSocketListeners();
+    
+    // Set up auto-refresh for active chats
+    this.setupAutoRefresh();
   }
   
   private async handleDirectMessageFromUrl(userId: string, username: string): Promise<void> {
@@ -263,12 +277,20 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    // Save current chat state before destroying
+    this.saveChatState();
+    
     // Clean up subscriptions
     this.subscriptions.forEach(sub => sub.unsubscribe());
     
     // Clear typing timeout
     if (this.typingTimeout) {
       clearTimeout(this.typingTimeout);
+    }
+    
+    // Clear auto-refresh interval
+    if (this.autoRefreshInterval) {
+      clearInterval(this.autoRefreshInterval);
     }
     
     // Leave current room
@@ -456,7 +478,6 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private setupSocketListeners(): void {
-    // Simplified socket listening - will be enhanced when socket service is properly exposed
     console.log('Setting up socket listeners...');
     
     // Subscribe to online users
@@ -464,7 +485,23 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       this.onlineUsers = users;
     });
     
-    this.subscriptions.push(onlineUsersSub);
+    // Subscribe to new direct messages
+    const newDirectMessagesSub = this.socketService.newDirectMessages$.subscribe(message => {
+      if (message && this.currentUser) {
+        console.log('📨 New direct message received:', message);
+        this.handleNewDirectMessage(message);
+      }
+    });
+    
+    // Subscribe to new channel messages  
+    const newMessagesSub = this.socketService.newMessages$.subscribe(message => {
+      if (message && this.currentUser) {
+        console.log('📨 New channel message received:', message);
+        this.handleNewChannelMessage(message);
+      }
+    });
+    
+    this.subscriptions.push(onlineUsersSub, newDirectMessagesSub, newMessagesSub);
   }
 
   // Tab switching
@@ -488,13 +525,19 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Channel selection
   async selectChannel(channel: ChatChannel): Promise<void> {
+    console.log('🔷 Selecting channel:', channel.name, 'ID:', channel.id);
     this.selectedChannel = channel;
     this.selectedDirectMessage = null;
     
     // Load channel messages
+    console.log('📚 Loading messages for channel:', channel.id);
     await this.loadChannelMessages(channel.id);
     
-    console.log('Selected channel:', channel.name);
+    // Update message count and save state
+    this.lastMessageCount = this.messages.length;
+    this.saveChatState();
+    
+    console.log('✅ Selected channel:', channel.name, 'Messages loaded:', this.messages.length);
   }
 
   // Direct message selection
@@ -516,6 +559,10 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Reset unread count
     dm.unreadCount = 0;
+    
+    // Update message count and save state
+    this.lastMessageCount = this.messages.length;
+    this.saveChatState();
     
     // Join a room for direct messaging
     if (this.currentUser) {
@@ -594,12 +641,25 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Send message
   async sendMessage(): Promise<void> {
-    if (!this.newMessage.trim() || !this.currentUser) return;
+    if (!this.newMessage.trim() || !this.currentUser) {
+      console.log('❌ Cannot send message: newMessage or currentUser missing', {
+        newMessage: this.newMessage.trim(),
+        currentUser: !!this.currentUser
+      });
+      return;
+    }
+    
+    console.log('📤 Attempting to send message:', {
+      message: this.newMessage.trim(),
+      selectedChannel: this.selectedChannel,
+      selectedDirectMessage: this.selectedDirectMessage,
+      currentUser: this.currentUser.username
+    });
     
     try {
       if (this.selectedChannel) {
         // Send channel message via socket
-        console.log('Sending channel message');
+        console.log('🔷 Sending channel message to channel:', this.selectedChannel.name, 'ID:', this.selectedChannel.id);
         const messageData = {
           content: this.newMessage.trim(),
           channelId: this.selectedChannel.id,
@@ -609,12 +669,15 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
         };
         
         // Save message to database via HTTP
-        await this.chatService.sendChannelMessage(this.selectedChannel.id, {
+        console.log('💾 Saving message to database...');
+        const savedMessage = await this.chatService.sendChannelMessage(this.selectedChannel.id, {
           content: this.newMessage.trim(),
           senderId: this.currentUser.id
         });
+        console.log('✅ Message saved to database:', savedMessage);
         
         // Also emit via socket for real-time updates
+        console.log('📡 Emitting message via socket...');
         this.socketService.connect(
           parseInt(this.currentUser.id),
           this.currentUser.username,
@@ -627,6 +690,27 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
           senderUsername: this.currentUser.username,
           senderAvatar: this.currentUser.avatar
         });
+        console.log('✅ Message emitted via socket');
+        
+        // Add message to local messages array for immediate UI update
+        const localMessage = {
+          id: `temp-${Date.now()}`,
+          content: this.newMessage.trim(),
+          senderId: this.currentUser.id,
+          senderUsername: this.currentUser.username,
+          senderAvatar: this.currentUser.avatar,
+          messageType: 'TEXT' as const,
+          isEdited: false,
+          createdAt: new Date().toISOString(),
+          reactions: [],
+          sender: {
+            id: this.currentUser.id,
+            username: this.currentUser.username,
+            avatar: this.currentUser.avatar
+          }
+        };
+        this.messages.push(localMessage);
+        console.log('💬 Added local channel message:', localMessage);
         
       } else if (this.selectedDirectMessage) {
         // Send direct message
@@ -682,8 +766,21 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       // Clear input
       this.newMessage = '';
       
+      // Update message count and save state after sending
+      this.lastMessageCount = this.messages.length;
+      this.saveChatState();
+      
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
+      console.error('Context:', {
+        selectedChannel: this.selectedChannel,
+        selectedDirectMessage: this.selectedDirectMessage,
+        currentUser: this.currentUser,
+        messageContent: this.newMessage.trim()
+      });
+      
+      // You could add user notification here
+      // this.notificationService.showError('Failed to send message. Please try again.');
     }
   }
 
@@ -1235,6 +1332,308 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       
     } catch (error) {
       console.error('❌ Error adding new DM user:', error);
+    }
+  }
+
+  private handleNewDirectMessage(message: any): void {
+    if (!this.currentUser) return;
+    
+    const senderId = message.senderId?.toString() || message.userId?.toString();
+    const currentUserId = this.currentUser.id?.toString();
+    
+    // Don't handle our own messages
+    if (senderId === currentUserId) {
+      console.log('🚫 Ignoring own message');
+      return;
+    }
+    
+    console.log('📨 Processing new direct message from:', senderId);
+    
+    // Add message to current conversation if it's open
+    if (this.selectedDirectMessage && this.selectedDirectMessage.userId === senderId) {
+      const newMessage: ChatMessage = {
+        id: message.id?.toString() || Date.now().toString(),
+        content: message.content || '',
+        senderId: senderId,
+        senderUsername: message.senderUsername || message.sender?.username || 'Unknown',
+        senderAvatar: message.senderAvatar || message.sender?.avatar,
+        sender: message.sender || {
+          id: senderId,
+          username: message.senderUsername || 'Unknown',
+          avatar: message.senderAvatar
+        },
+        receiverId: currentUserId,
+        messageType: 'TEXT',
+        isEdited: false,
+        createdAt: new Date(message.createdAt || message.timestamp || Date.now()).toISOString(),
+        reactions: []
+      };
+      
+      this.messages.push(newMessage);
+      console.log('💬 Added message to current conversation');
+      
+      // Don't increment unread count for currently open conversation
+    } else {
+      // Update unread count for the sender
+      this.updateDirectMessageUnreadCount(senderId);
+    }
+    
+    // Show desktop notification if enabled
+    this.showDesktopNotification({
+      senderUsername: message.senderUsername || 'Unknown',
+      content: message.content || 'Neue Nachricht erhalten',
+      senderAvatar: message.senderAvatar,
+      senderId: senderId
+    });
+    
+    // Play notification sound
+    this.playNotificationSound();
+    
+    // Update favicon
+    this.updateUnreadCount();
+  }
+
+  private handleNewChannelMessage(message: any): void {
+    if (!this.currentUser) return;
+    
+    const senderId = message.senderId?.toString() || message.userId?.toString();
+    const currentUserId = this.currentUser.id?.toString();
+    
+    // Don't handle our own messages
+    if (senderId === currentUserId) {
+      console.log('🚫 Ignoring own channel message');
+      return;
+    }
+    
+    console.log('📨 Processing new channel message:', message);
+    
+    // Add message to current channel if it's open
+    if (this.selectedChannel && this.selectedChannel.id === message.channelId?.toString()) {
+      const newMessage: ChatMessage = {
+        id: message.id?.toString() || Date.now().toString(),
+        content: message.content || '',
+        senderId: senderId,
+        senderUsername: message.senderUsername || message.sender?.username || 'Unknown',
+        senderAvatar: message.senderAvatar || message.sender?.avatar,
+        sender: message.sender || {
+          id: senderId,
+          username: message.senderUsername || 'Unknown',
+          avatar: message.senderAvatar
+        },
+        channelId: message.channelId?.toString(),
+        messageType: 'TEXT',
+        isEdited: false,
+        createdAt: new Date(message.createdAt || message.timestamp || Date.now()).toISOString(),
+        reactions: []
+      };
+      
+      this.messages.push(newMessage);
+      console.log('💬 Added message to current channel');
+    }
+    
+    // Could add server/channel notification logic here in the future
+  }
+
+  // ===== STATE PERSISTENCE METHODS =====
+  
+  private saveChatState(): void {
+    if (!this.currentUser) return;
+    
+    const chatState = {
+      userId: this.currentUser.id,
+      activeTab: this.activeTab,
+      selectedServerId: this.selectedServer?.id || null,
+      selectedChannelId: this.selectedChannel?.id || null,
+      selectedDirectMessageUserId: this.selectedDirectMessage?.userId || null,
+      timestamp: Date.now()
+    };
+    
+    try {
+      localStorage.setItem(this.CHAT_STATE_KEY, JSON.stringify(chatState));
+      console.log('💾 Chat state saved:', chatState);
+    } catch (error) {
+      console.error('❌ Error saving chat state:', error);
+    }
+  }
+
+  private restoreChatState(): void {
+    if (!this.currentUser) return;
+    
+    try {
+      const savedState = localStorage.getItem(this.CHAT_STATE_KEY);
+      if (!savedState) return;
+      
+      const chatState = JSON.parse(savedState);
+      
+      // Only restore if it's for the same user and not too old (1 hour)
+      const oneHour = 60 * 60 * 1000;
+      if (chatState.userId !== this.currentUser.id || 
+          (Date.now() - chatState.timestamp) > oneHour) {
+        console.log('🗑️ Chat state expired or for different user, clearing');
+        localStorage.removeItem(this.CHAT_STATE_KEY);
+        return;
+      }
+      
+      // Restore tab
+      if (chatState.activeTab) {
+        this.activeTab = chatState.activeTab;
+      }
+      
+      console.log('🔄 Chat state restored:', chatState);
+    } catch (error) {
+      console.error('❌ Error restoring chat state:', error);
+      localStorage.removeItem(this.CHAT_STATE_KEY);
+    }
+  }
+
+  private restoreSelectedChat(): void {
+    if (!this.currentUser) return;
+    
+    try {
+      const savedState = localStorage.getItem(this.CHAT_STATE_KEY);
+      if (!savedState) return;
+      
+      const chatState = JSON.parse(savedState);
+      
+      // Restore direct message chat
+      if (chatState.selectedDirectMessageUserId && this.activeTab === 'direct') {
+        const dm = this.directMessages.find(dm => dm.userId === chatState.selectedDirectMessageUserId);
+        if (dm) {
+          console.log('🔄 Restoring direct message chat:', dm.username);
+          this.selectDirectMessage(dm);
+        }
+      }
+      
+      // Restore server/channel chat
+      else if (chatState.selectedServerId && this.activeTab === 'servers') {
+        const server = this.chatServers.find(s => s.id === chatState.selectedServerId);
+        if (server) {
+          this.selectServer(server).then(() => {
+            if (chatState.selectedChannelId) {
+              const channel = server.channels.find(c => c.id === chatState.selectedChannelId);
+              if (channel) {
+                console.log('🔄 Restoring channel chat:', channel.name);
+                this.selectChannel(channel);
+              }
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error restoring selected chat:', error);
+    }
+  }
+
+  // ===== AUTO-REFRESH METHODS =====
+  
+  private setupAutoRefresh(): void {
+    // Clear any existing interval
+    if (this.autoRefreshInterval) {
+      clearInterval(this.autoRefreshInterval);
+    }
+    
+    // Set up periodic refresh for active chats
+    this.autoRefreshInterval = setInterval(() => {
+      this.autoRefreshMessages();
+    }, this.AUTO_REFRESH_INTERVAL);
+    
+    console.log('🔄 Auto-refresh setup complete');
+  }
+
+  private async autoRefreshMessages(): Promise<void> {
+    // Don't auto-refresh if user is typing
+    if (this.newMessage.trim().length > 0) {
+      return;
+    }
+    
+    try {
+      if (this.selectedDirectMessage && !this.isLoading) {
+        await this.refreshDirectMessages();
+      } else if (this.selectedChannel && !this.isLoading) {
+        await this.refreshChannelMessages();
+      }
+    } catch (error) {
+      console.error('❌ Error during auto-refresh:', error);
+    }
+  }
+
+  private async refreshDirectMessages(): Promise<void> {
+    if (!this.selectedDirectMessage || this.isLoading) return;
+    
+    try {
+      const messages = await this.chatService.getDirectMessages(
+        this.selectedDirectMessage.userId, 
+        this.messageLimit, 
+        0
+      );
+      
+      // Only update if we have new messages
+      if (messages.length !== this.lastMessageCount) {
+        console.log(`🔄 Auto-refresh found ${messages.length} messages (was ${this.lastMessageCount})`);
+        
+        const processedMessages = (messages as any[]).map(msg => ({
+          ...msg,
+          sender: {
+            id: msg.senderId,
+            username: msg.senderUsername || msg.sender?.username,
+            avatar: msg.senderAvatar || msg.sender?.avatar
+          }
+        }));
+        
+        this.messages = processedMessages;
+        this.lastMessageCount = messages.length;
+        
+        // Save current state when messages are loaded
+        this.saveChatState();
+        
+        // Auto-scroll to bottom if we're near the bottom
+        setTimeout(() => this.scrollToBottom(), 100);
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing direct messages:', error);
+    }
+  }
+
+  private async refreshChannelMessages(): Promise<void> {
+    if (!this.selectedChannel || this.isLoading) return;
+    
+    try {
+      const messages = await this.chatService.getChannelMessages(this.selectedChannel.id);
+      
+      // Only update if we have new messages
+      if (messages.length !== this.lastMessageCount) {
+        console.log(`🔄 Auto-refresh found ${messages.length} messages (was ${this.lastMessageCount})`);
+        
+        this.messages = (messages as any[]).map(msg => ({
+          ...msg,
+          sender: {
+            id: msg.senderId,
+            username: msg.senderUsername || msg.sender?.username,
+            avatar: msg.senderAvatar || msg.sender?.avatar
+          }
+        }));
+        
+        this.lastMessageCount = messages.length;
+        
+        // Save current state when messages are loaded
+        this.saveChatState();
+        
+        // Auto-scroll to bottom if we're near the bottom
+        setTimeout(() => this.scrollToBottom(), 100);
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing channel messages:', error);
+    }
+  }
+
+  private scrollToBottom(): void {
+    try {
+      const messagesContainer = document.querySelector('.messages-container');
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    } catch (error) {
+      console.error('❌ Error scrolling to bottom:', error);
     }
   }
 }
