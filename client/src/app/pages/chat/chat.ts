@@ -104,6 +104,11 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
   // Message input
   newMessage = '';
   
+  // Notification system
+  totalUnreadCount = 0;
+  originalFaviconHref = '';
+  notificationAudio: HTMLAudioElement | null = null;
+  
   // Modal states
   showServerModal = false;
   showChannelModal = false;
@@ -159,6 +164,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit(): void {
     console.log('🔄 Chat component ngOnInit started');
+    
+    // Initialize notification system
+    this.initializeNotificationSystem();
     
     // TRIPLE RESET to ensure no modals are open
     this.resetModalStates();
@@ -351,11 +359,31 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     // Additional subscription for direct messages from the SocketService
     this.subscriptions.push(
       this.socketService.newDirectMessages$.subscribe(message => {
-        if (message && this.selectedDirectMessage &&
-            (message.senderId === this.selectedDirectMessage.userId || 
-             message.receiverId === this.selectedDirectMessage.userId)) {
-          console.log('Adding direct message to UI:', message);
-          this.messages.push(message as unknown as ChatMessage);
+        if (message) {
+          console.log('🔔 New direct message received:', message);
+          
+          // Update unread count for the sender
+          this.updateDirectMessageUnreadCount(String(message.senderId));
+          
+          // Show notification if not currently viewing this chat
+          if (!this.selectedDirectMessage || this.selectedDirectMessage.userId !== String(message.senderId)) {
+            this.showDesktopNotification(message);
+            this.playNotificationSound();
+          }
+          
+          // Add to UI if currently viewing this chat
+          if (this.selectedDirectMessage &&
+              (String(message.senderId) === this.selectedDirectMessage.userId || 
+               String(message.receiverId) === this.selectedDirectMessage.userId)) {
+            console.log('Adding direct message to UI:', message);
+            this.messages.push(message as unknown as ChatMessage);
+            
+            // Mark as read since user is viewing
+            this.markDirectMessageAsRead(String(message.senderId));
+          }
+          
+          // Update unread counts and favicon
+          this.updateUnreadCount();
         }
       })
     );
@@ -475,6 +503,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedDirectMessage = dm;
     this.selectedServer = null;
     this.selectedChannel = null;
+    
+    // Mark messages as read
+    this.markDirectMessageAsRead(dm.userId);
     
     // Load DM history
     console.log('📚 Loading direct message history for:', dm.userId);
@@ -1051,10 +1082,159 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     this.newServerPrivate = false;
     this.newChannelName = '';
     this.newChannelDescription = '';
-    this.newChannelPrivate = false;
-    this.createdInviteCode = '';
-    this.serverInvites = [];
+  }
+
+  // ===============================
+  // NOTIFICATION SYSTEM
+  // ===============================
+  
+  private initializeNotificationSystem(): void {
+    console.log('🔔 Initializing notification system');
     
-    console.log('✅ All modal states reset - should show chat interface now');
+    // Store original favicon
+    const favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
+    if (favicon) {
+      this.originalFaviconHref = favicon.href;
+    }
+    
+    // Initialize notification audio (optional)
+    try {
+      this.notificationAudio = new Audio();
+      this.notificationAudio.volume = 0.3;
+      // You can add a notification sound file here
+      // this.notificationAudio.src = '/assets/sounds/notification.mp3';
+    } catch (error) {
+      console.log('Audio not available for notifications');
+    }
+    
+    // Request notification permission
+    this.requestNotificationPermission();
+  }
+  
+  private requestNotificationPermission(): void {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        console.log('🔔 Notification permission:', permission);
+      });
+    }
+  }
+  
+  private updateFavicon(hasUnread: boolean): void {
+    const favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
+    if (!favicon) return;
+    
+    if (hasUnread) {
+      // Create a canvas to draw a red dot on the favicon
+      const canvas = document.createElement('canvas');
+      canvas.width = 32;
+      canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        // Draw original favicon background (simplified)
+        ctx.fillStyle = '#7289da'; // Discord-like blue
+        ctx.fillRect(0, 0, 32, 32);
+        
+        // Draw red notification dot
+        ctx.fillStyle = '#ff4444';
+        ctx.beginPath();
+        ctx.arc(24, 8, 6, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Update favicon
+        favicon.href = canvas.toDataURL('image/png');
+      }
+    } else {
+      // Reset to original favicon
+      if (this.originalFaviconHref) {
+        favicon.href = this.originalFaviconHref;
+      }
+    }
+  }
+  
+  private updateUnreadCount(): void {
+    // Calculate total unread messages
+    this.totalUnreadCount = this.directMessages.reduce((total, dm) => total + dm.unreadCount, 0);
+    
+    // Update favicon
+    this.updateFavicon(this.totalUnreadCount > 0);
+    
+    // Update page title
+    if (this.totalUnreadCount > 0) {
+      document.title = `(${this.totalUnreadCount}) DiscordGym`;
+    } else {
+      document.title = 'DiscordGym';
+    }
+    
+    console.log('🔔 Total unread messages:', this.totalUnreadCount);
+  }
+  
+  private showDesktopNotification(message: any): void {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification(`New message from ${message.senderUsername}`, {
+        body: message.content,
+        icon: message.senderAvatar || '/assets/default-avatar.png',
+        tag: `dm-${message.senderId}` // Prevents duplicate notifications
+      });
+      
+      // Auto-close after 5 seconds
+      setTimeout(() => notification.close(), 5000);
+      
+      // Focus window when clicked
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    }
+  }
+  
+  private playNotificationSound(): void {
+    if (this.notificationAudio) {
+      this.notificationAudio.play().catch(error => {
+        console.log('Could not play notification sound:', error);
+      });
+    }
+  }
+  
+  private updateDirectMessageUnreadCount(senderId: string): void {
+    const dm = this.directMessages.find(dm => dm.userId === senderId);
+    if (dm) {
+      dm.unreadCount++;
+      console.log(`🔔 Updated unread count for ${dm.username}: ${dm.unreadCount}`);
+    } else {
+      // If we don't have this user in our DM list, add them
+      this.addNewDirectMessageUser(senderId);
+    }
+  }
+  
+  private markDirectMessageAsRead(userId: string): void {
+    const dm = this.directMessages.find(dm => dm.userId === userId);
+    if (dm && dm.unreadCount > 0) {
+      dm.unreadCount = 0;
+      console.log(`✅ Marked messages as read for ${dm.username}`);
+      this.updateUnreadCount();
+    }
+  }
+  
+  private async addNewDirectMessageUser(userId: string): Promise<void> {
+    try {
+      // Get user info from the backend
+      const userInfo = await this.chatService.getOrCreateDirectChat(userId);
+      
+      const newDM: DirectMessage = {
+        userId: userId,
+        username: userInfo.username || 'Unknown User',
+        avatar: userInfo.avatar,
+        unreadCount: 1,
+        lastMessage: undefined,
+        lastMessageTime: new Date()
+      };
+      
+      this.directMessages.unshift(newDM); // Add to top of list
+      console.log('🆕 Added new DM user:', newDM.username);
+      
+    } catch (error) {
+      console.error('❌ Error adding new DM user:', error);
+    }
   }
 }

@@ -183,6 +183,20 @@ export class ChatService {
     senderId: string;
     receiverId: string;
   }) {
+    // Validate that both sender and receiver exist
+    const [sender, receiver] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: data.senderId } }),
+      this.prisma.user.findUnique({ where: { id: data.receiverId } })
+    ]);
+
+    if (!sender) {
+      throw new Error(`Sender with ID ${data.senderId} not found`);
+    }
+
+    if (!receiver) {
+      throw new Error(`Receiver with ID ${data.receiverId} not found`);
+    }
+
     return this.prisma.chatMessage.create({
       data: {
         content: data.content,
@@ -202,7 +216,7 @@ export class ChatService {
     });
   }
 
-    // Get user's friends
+  // Get user's friends
   async getFriends(userId: string) {
     // Find accepted friendships where the user is either the sender or the receiver
     const friendships = await this.prisma.friendship.findMany({

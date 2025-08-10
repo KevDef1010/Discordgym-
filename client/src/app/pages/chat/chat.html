@@ -30,8 +30,14 @@
       <!-- Direct Messages Tab -->
       <div *ngIf="activeTab === 'direct'" class="p-4">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+          <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide flex items-center">
             Direktnachrichten
+            <span 
+              *ngIf="totalUnreadCount > 0" 
+              class="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full"
+            >
+              {{ totalUnreadCount }}
+            </span>
           </h3>
           <div class="flex space-x-2">
             <button 
@@ -77,9 +83,18 @@
             <div class="ml-3 flex-1 min-w-0">
               <div class="flex items-center justify-between">
                 <p class="text-sm font-medium text-white truncate">{{ dm.username }}</p>
-                <span *ngIf="dm.lastMessageTime" class="text-xs text-gray-400">
-                  {{ formatTime(dm.lastMessageTime) }}
-                </span>
+                <div class="flex items-center space-x-2">
+                  <span *ngIf="dm.lastMessageTime" class="text-xs text-gray-400">
+                    {{ formatTime(dm.lastMessageTime) }}
+                  </span>
+                  <!-- Unread count badge -->
+                  <span 
+                    *ngIf="dm.unreadCount > 0" 
+                    class="bg-red-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center font-medium"
+                  >
+                    {{ dm.unreadCount > 99 ? '99+' : dm.unreadCount }}
+                  </span>
+                </div>
               </div>
               <p *ngIf="dm.lastMessage" class="text-xs text-gray-400 truncate">
                 {{ dm.lastMessage }}
@@ -88,14 +103,6 @@
                 <div class="w-2 h-2 rounded-full mr-2" [class]="getStatusColor(getUserStatus(dm.userId))"></div>
                 {{ isUserOnline(dm.userId) ? 'Online' : 'Offline' }}
               </div>
-            </div>
-            
-            <!-- Unread Count -->
-            <div 
-              *ngIf="dm.unreadCount > 0"
-              class="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] h-5 flex items-center justify-center"
-            >
-              {{ dm.unreadCount > 99 ? '99+' : dm.unreadCount }}
             </div>
           </div>
         </div>
