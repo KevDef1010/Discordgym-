@@ -70,6 +70,18 @@ interface DirectMessage {
   unreadCount: number;
 }
 
+interface MessageNotification {
+  id: string;
+  username: string;
+  avatar?: string;
+  content: string;
+  timestamp: Date;
+  isNew: boolean;
+  type: 'direct' | 'channel';
+  senderId: string;
+  channelId?: string;
+}
+
 @Component({
   selector: 'app-chat',
   imports: [
@@ -108,6 +120,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
   totalUnreadCount = 0;
   originalFaviconHref = '';
   notificationAudio: HTMLAudioElement | null = null;
+  recentNotifications: MessageNotification[] = [];
   
   // Modal states
   showServerModal = false;
@@ -319,6 +332,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       
       // Load direct messages first (most important)
       await this.loadDirectMessages();
+      
+      // Load recent unread messages for offline users
+      await this.loadRecentUnreadMessages();
       
       // Load user's servers
       try {
@@ -1378,6 +1394,20 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       this.updateDirectMessageUnreadCount(senderId);
     }
     
+    // Add visual notification for all direct messages (except current chat)
+    this.addMessageNotification(message, 'direct');
+    
+    // Show desktop notification for messages not in current chat
+    if (!this.selectedDirectMessage || this.selectedDirectMessage.userId !== senderId) {
+      this.showDesktopNotification({
+        senderUsername: message.senderUsername || message.sender?.username || 'Unknown',
+        content: message.content,
+        senderAvatar: message.senderAvatar || message.sender?.avatar,
+        senderId: senderId
+      });
+      this.playNotificationSound();
+    }
+    
     // Show desktop notification if enabled
     this.showDesktopNotification({
       senderUsername: message.senderUsername || 'Unknown',
@@ -1431,7 +1461,19 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       console.log('💬 Added message to current channel');
     }
     
-    // Could add server/channel notification logic here in the future
+    // Add visual notification for all channel messages (except current channel)
+    this.addMessageNotification(message, 'channel');
+    
+    // Show desktop notification for messages not in current channel
+    if (!this.selectedChannel || this.selectedChannel.id !== message.channelId?.toString()) {
+      this.showDesktopNotification({
+        senderUsername: message.senderUsername || message.sender?.username || 'Unknown',
+        content: message.content,
+        senderAvatar: message.senderAvatar || message.sender?.avatar,
+        senderId: senderId
+      });
+      this.playNotificationSound();
+    }
   }
 
   // ===== STATE PERSISTENCE METHODS =====
@@ -1634,6 +1676,159 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     } catch (error) {
       console.error('❌ Error scrolling to bottom:', error);
+    }
+  }
+
+  // NOTIFICATION METHODS
+
+  trackNotification(index: number, notification: MessageNotification): string {
+    return notification.id;
+  }
+
+  getTimeAgo(timestamp: Date): string {
+    const now = new Date();
+    const diff = now.getTime() - timestamp.getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'gerade eben';
+    if (minutes < 60) return `vor ${minutes}m`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `vor ${hours}h`;
+    
+    const days = Math.floor(hours / 24);
+    return `vor ${days}d`;
+  }
+
+  replyToNotification(notification: MessageNotification): void {
+    if (notification.type === 'direct') {
+      // Switch to direct messages and select the sender
+      this.activeTab = 'direct';
+      const directMessage = this.directMessages.find(dm => dm.userId === notification.senderId);
+      if (directMessage) {
+        this.selectDirectMessage(directMessage);
+      }
+    } else if (notification.type === 'channel' && notification.channelId) {
+      // Switch to servers and select the channel
+      this.activeTab = 'servers';
+      // Find the server and channel
+      for (const server of this.chatServers) {
+        const channel = server.channels?.find((ch: ChatChannel) => ch.id === notification.channelId);
+        if (channel) {
+          this.selectedServer = server;
+          this.selectChannel(channel);
+          break;
+        }
+      }
+    }
+    
+    // Dismiss the notification after navigation
+    this.dismissNotification(notification.id);
+    
+    // Focus the message input
+    setTimeout(() => {
+      const messageInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+      if (messageInput) {
+        messageInput.focus();
+      }
+    }, 100);
+  }
+
+  dismissNotification(notificationId: string): void {
+    this.recentNotifications = this.recentNotifications.filter(n => n.id !== notificationId);
+  }
+
+  private addMessageNotification(message: any, type: 'direct' | 'channel'): void {
+    // Don't show notifications for our own messages
+    if (message.senderId === this.currentUser?.id) return;
+    
+    // Don't show notification if we're currently viewing this chat
+    if (type === 'direct' && this.selectedDirectMessage?.userId === message.senderId) return;
+    if (type === 'channel' && this.selectedChannel?.id === message.channelId) return;
+    
+    const notification: MessageNotification = {
+      id: `notification-${Date.now()}-${Math.random()}`,
+      username: message.senderUsername || message.sender?.username || 'Unknown',
+      avatar: message.senderAvatar || message.sender?.avatar,
+      content: message.content,
+      timestamp: new Date(),
+      isNew: true,
+      type: type,
+      senderId: message.senderId,
+      channelId: type === 'channel' ? message.channelId : undefined
+    };
+    
+    // Add to the beginning of the array
+    this.recentNotifications.unshift(notification);
+    
+    // Keep only the last 5 notifications
+    if (this.recentNotifications.length > 5) {
+      this.recentNotifications = this.recentNotifications.slice(0, 5);
+    }
+    
+    // Mark as not new after 3 seconds
+    setTimeout(() => {
+      const notif = this.recentNotifications.find(n => n.id === notification.id);
+      if (notif) {
+        notif.isNew = false;
+      }
+    }, 3000);
+    
+    // Auto-dismiss after 10 seconds
+    setTimeout(() => {
+      this.dismissNotification(notification.id);
+    }, 10000);
+    
+    console.log('🔔 Added notification:', notification);
+  }
+
+  // OFFLINE MESSAGE LOADING
+
+  private async loadRecentUnreadMessages(): Promise<void> {
+    if (!this.currentUser) return;
+    
+    try {
+      console.log('📬 Loading recent unread messages for offline user...');
+      
+      // Get recent direct messages (last 24 hours)
+      const twentyFourHoursAgo = new Date();
+      twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+      
+      // Load recent messages for each friend
+      for (const dm of this.directMessages) {
+        try {
+          const recentMessages = await this.chatService.getDirectMessages(dm.userId, 50, 0);
+          const unreadMessages = (recentMessages as any[]).filter(msg => {
+            const messageTime = new Date(msg.createdAt);
+            return messageTime > twentyFourHoursAgo && 
+                   msg.senderId !== this.currentUser!.id;
+          });
+          
+          // Update unread count
+          dm.unreadCount = unreadMessages.length;
+          
+          // Show notifications for recent messages (up to 3 per friend)
+          const recentUnread = unreadMessages.slice(0, 3);
+          for (const msg of recentUnread) {
+            this.addMessageNotification({
+              ...msg,
+              senderUsername: dm.username,
+              senderAvatar: dm.avatar
+            }, 'direct');
+          }
+          
+        } catch (error) {
+          console.error('❌ Error loading recent messages for:', dm.username, error);
+        }
+      }
+      
+      // Update total unread count
+      this.updateUnreadCount();
+      
+      console.log('✅ Finished loading recent unread messages');
+      
+    } catch (error) {
+      console.error('❌ Error loading recent unread messages:', error);
     }
   }
 }
