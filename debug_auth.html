@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .debug-label { font-weight: bold; color: #333; }
+        .debug-value { margin-left: 10px; color: #666; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .error { color: red; }
+        .success { color: green; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Authentication Debug Tool</h1>
+    
+    <div class="debug-section">
+        <div class="debug-label">Current Authentication State:</div>
+        <div id="auth-state" class="debug-value">Loading...</div>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-label">LocalStorage Contents:</div>
+        <pre id="localstorage-content"></pre>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-label">API Test Results:</div>
+        <div id="api-results"></div>
+        <button onclick="testAPI()">Test API Connection</button>
+        <button onclick="testFriendsAPI()">Test Friends API</button>
+        <button onclick="loginTestUser()">Setup Test User</button>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-label">Actions:</div>
+        <button onclick="clearAuth()">Clear Authentication</button>
+        <button onclick="refreshData()">Refresh Data</button>
+    </div>
+
+    <script>
+        function refreshData() {
+            checkAuthState();
+            checkLocalStorage();
+        }
+        
+        function checkAuthState() {
+            const authState = document.getElementById('auth-state');
+            const currentUser = localStorage.getItem('currentUser');
+            const token = localStorage.getItem('authToken');
+            
+            if (currentUser && token) {
+                try {
+                    const user = JSON.parse(currentUser);
+                    authState.innerHTML = `<span class="success">Logged in as: ${user.username} (ID: ${user.id})</span>`;
+                } catch (e) {
+                    authState.innerHTML = `<span class="error">Invalid user data in localStorage</span>`;
+                }
+            } else {
+                authState.innerHTML = `<span class="error">Not logged in</span>`;
+            }
+        }
+        
+        function checkLocalStorage() {
+            const content = document.getElementById('localstorage-content');
+            const data = {};
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                data[key] = localStorage.getItem(key);
+            }
+            
+            content.textContent = JSON.stringify(data, null, 2);
+        }
+        
+        async function testAPI() {
+            const results = document.getElementById('api-results');
+            results.innerHTML = 'Testing API...';
+            
+            try {
+                const response = await fetch('http://localhost:3001/health', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    results.innerHTML = '<span class="success">API is responding</span>';
+                } else {
+                    results.innerHTML = `<span class="error">API error: ${response.status}</span>`;
+                }
+            } catch (error) {
+                results.innerHTML = `<span class="error">API connection failed: ${error.message}</span>`;
+            }
+        }
+        
+        async function testFriendsAPI() {
+            const results = document.getElementById('api-results');
+            const currentUser = localStorage.getItem('currentUser');
+            
+            if (!currentUser) {
+                results.innerHTML = '<span class="error">No user logged in to test friends API</span>';
+                return;
+            }
+            
+            try {
+                const user = JSON.parse(currentUser);
+                const response = await fetch(`http://localhost:3001/social/list/${user.id}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const friends = await response.json();
+                    results.innerHTML = `<span class="success">Friends API working. Found ${friends.length} friends:</span><pre>${JSON.stringify(friends, null, 2)}</pre>`;
+                } else {
+                    results.innerHTML = `<span class="error">Friends API error: ${response.status}</span>`;
+                }
+            } catch (error) {
+                results.innerHTML = `<span class="error">Friends API failed: ${error.message}</span>`;
+            }
+        }
+        
+        async function loginTestUser() {
+            const results = document.getElementById('api-results');
+            results.innerHTML = 'Setting up test user...';
+            
+            // Manually set up a test user that exists in the database
+            const testUser = {
+                id: 'cme61tw8o0000kc07rovihxp6', // Admin user ID from database
+                username: 'admin',
+                email: 'admin@admin.de',
+                role: 'admin',
+                avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
+                isActive: true,
+                createdAt: '2025-08-10T00:00:00.000Z'
+            };
+            
+            const testToken = 'test_token_123';
+            
+            localStorage.setItem('currentUser', JSON.stringify(testUser));
+            localStorage.setItem('authToken', testToken);
+            results.innerHTML = '<span class="success">Test user set up successfully!</span>';
+            refreshData();
+        }
+        
+        function clearAuth() {
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('discordGym_chatState');
+            refreshData();
+        }
+        
+        // Initial load
+        refreshData();
+    </script>
+</body>
+</html>

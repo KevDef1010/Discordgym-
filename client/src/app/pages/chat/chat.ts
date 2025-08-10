@@ -450,46 +450,49 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       console.log('📱 Loading direct messages...');
       
       // Load friends first
-      const friends = await this.chatService.getFriends();
-      console.log('👥 Friends loaded:', friends);
+      const friendships = await this.chatService.getFriends();
+      console.log('👥 Friendships loaded:', friendships);
+      console.log('👥 Friendships type:', typeof friendships, 'Array?', Array.isArray(friendships));
+      console.log('👥 Friendships length:', Array.isArray(friendships) ? friendships.length : 'N/A');
       
-      if (Array.isArray(friends) && friends.length > 0) {
-        this.directMessages = friends.map((friend: any) => ({
-          userId: friend.id,
-          username: friend.username,
-          avatar: friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.username}`,
-          lastMessage: friend.lastMessage?.content,
-          lastMessageTime: friend.lastMessage?.createdAt ? new Date(friend.lastMessage.createdAt) : undefined,
-          unreadCount: 0
-        }));
+      if (Array.isArray(friendships) && friendships.length > 0) {
+        this.directMessages = friendships.map((friendship: any) => {
+          console.log('🔄 Processing friendship:', friendship);
+          // The API returns friendship objects with nested friend data
+          const friend = friendship.friend;
+          console.log('👤 Friend data:', friend);
+          
+          if (!friend) {
+            console.warn('⚠️ Friendship object missing friend data:', friendship);
+            return null;
+          }
+          
+          return {
+            userId: friend.id,
+            username: friend.username,
+            avatar: friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.username}`,
+            lastMessage: friend.lastMessage?.content,
+            lastMessageTime: friend.lastMessage?.createdAt ? new Date(friend.lastMessage.createdAt) : undefined,
+            unreadCount: 0
+          };
+        }).filter((dm: any) => dm !== null) as DirectMessage[]; // Remove any null entries and cast to correct type
         
         console.log('✅ Direct messages initialized:', this.directMessages.length, 'chats');
+        console.log('� Direct messages array:', this.directMessages);
       } else {
-        console.log('📭 No friends found, empty direct messages list');
+        console.log('📭 No friends found or friends array is empty');
         this.directMessages = [];
-        
-        // For testing - add a test conversation
-        this.directMessages.push({
-          userId: 'test-user-123',
-          username: 'TestUser',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=TestUser',
-          unreadCount: 0
-        });
-        console.log('🧪 Added test user for development');
       }
       
-      // Also load available friends for new chats
-      this.availableFriends = friends || [];
+      // Also load available friends for new chats (extract friend data from friendships)
+      this.availableFriends = Array.isArray(friendships) 
+        ? friendships.map((f: any) => f.friend).filter((friend: any) => friend !== null)
+        : [];
       
     } catch (error) {
       console.error('❌ Error loading direct messages:', error);
-      // Fallback: add a test conversation for development
-      this.directMessages = [{
-        userId: 'test-user-123',
-        username: 'TestUser',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=TestUser',
-        unreadCount: 0
-      }];
+      console.error('❌ Error details:', error);
+      this.directMessages = [];
     }
   }
 
