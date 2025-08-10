@@ -1415,8 +1415,10 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     
     console.log('📨 Processing new direct message from:', senderId);
     
+    const isCurrentDM = this.selectedDirectMessage && this.selectedDirectMessage.userId === senderId;
+    
     // Add message to current conversation if it's open
-    if (this.selectedDirectMessage && this.selectedDirectMessage.userId === senderId) {
+    if (isCurrentDM) {
       const newMessage: ChatMessage = {
         id: message.id?.toString() || Date.now().toString(),
         content: message.content || '',
@@ -1438,17 +1440,20 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       this.messages.push(newMessage);
       console.log('💬 Added message to current conversation');
       
-      // Don't increment unread count for currently open conversation
+      // Automatically mark as read since user is viewing this DM
+      const messageKey = this.getMessageKey(newMessage, 'direct', senderId);
+      if (messageKey) {
+        this.markMessageAsRead(messageKey);
+        console.log('✅ Auto-marked message as read (current DM):', messageKey);
+      }
     } else {
       // Update unread count for the sender
       this.updateDirectMessageUnreadCount(senderId);
-    }
-    
-    // Add visual notification for all direct messages (except current chat)
-    this.addMessageNotification(message, 'direct');
-    
-    // Show desktop notification for messages not in current chat
-    if (!this.selectedDirectMessage || this.selectedDirectMessage.userId !== senderId) {
+      
+      // Add visual notification for direct messages not in current chat
+      this.addMessageNotification(message, 'direct');
+      
+      // Show desktop notification for messages not in current chat
       this.showDesktopNotification({
         senderUsername: message.senderUsername || message.sender?.username || 'Unknown',
         content: message.content,
@@ -1457,17 +1462,6 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       });
       this.playNotificationSound();
     }
-    
-    // Show desktop notification if enabled
-    this.showDesktopNotification({
-      senderUsername: message.senderUsername || 'Unknown',
-      content: message.content || 'Neue Nachricht erhalten',
-      senderAvatar: message.senderAvatar,
-      senderId: senderId
-    });
-    
-    // Play notification sound
-    this.playNotificationSound();
     
     // Update favicon
     this.updateUnreadCount();
@@ -1487,8 +1481,10 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     
     console.log('📨 Processing new channel message:', message);
     
+    const isCurrentChannel = this.selectedChannel && this.selectedChannel.id === message.channelId?.toString();
+    
     // Add message to current channel if it's open
-    if (this.selectedChannel && this.selectedChannel.id === message.channelId?.toString()) {
+    if (isCurrentChannel) {
       const newMessage: ChatMessage = {
         id: message.id?.toString() || Date.now().toString(),
         content: message.content || '',
@@ -1509,13 +1505,18 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       
       this.messages.push(newMessage);
       console.log('💬 Added message to current channel');
-    }
-    
-    // Add visual notification for all channel messages (except current channel)
-    this.addMessageNotification(message, 'channel');
-    
-    // Show desktop notification for messages not in current channel
-    if (!this.selectedChannel || this.selectedChannel.id !== message.channelId?.toString()) {
+      
+      // Automatically mark as read since user is viewing this channel
+      const messageKey = this.getMessageKey(newMessage, 'channel', message.channelId?.toString());
+      if (messageKey) {
+        this.markMessageAsRead(messageKey);
+        console.log('✅ Auto-marked message as read (current channel):', messageKey);
+      }
+    } else {
+      // Only show notification and count as unread if not viewing current channel
+      this.addMessageNotification(message, 'channel');
+      
+      // Show desktop notification for messages not in current channel
       this.showDesktopNotification({
         senderUsername: message.senderUsername || message.sender?.username || 'Unknown',
         content: message.content,
@@ -1988,17 +1989,17 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       return false;
     }
     
-    // Don't show notification if we're currently viewing this chat
+    // Don't show notification if we're currently viewing this chat (messages will be auto-marked as read)
     if (type === 'direct' && this.selectedDirectMessage?.userId === message.senderId) {
-      console.log('🚫 Skipping notification: currently viewing direct chat');
+      console.log('🚫 Skipping notification: currently viewing direct chat (auto-read)');
       return false;
     }
     if (type === 'channel' && this.selectedChannel?.id === message.channelId) {
-      console.log('🚫 Skipping notification: currently viewing channel');
+      console.log('🚫 Skipping notification: currently viewing channel (auto-read)');
       return false;
     }
     
-    // Check if message has been read
+    // Check if message has been read (for offline messages)
     const messageKey = this.getMessageKey(message, type, chatId || message.channelId || message.senderId);
     if (messageKey && this.isMessageRead(messageKey)) {
       console.log('🚫 Skipping notification for read message:', messageKey);

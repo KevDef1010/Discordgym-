@@ -180,7 +180,7 @@
               <div class="flex-1">
                 <h3 class="font-medium text-gray-900">{{ invite.chatServer?.name || 'Unbekannter Server' }}</h3>
                 <p class="text-sm text-gray-600 mt-1">
-                  Eingeladen von: {{ invite.invitedBy?.username || 'Unbekannt' }}
+                  Eingeladen von: {{ invite.createdBy?.username || 'Unbekannt' }}
                 </p>
                 <p class="text-xs text-gray-500 mt-1">
                   Einladungscode: {{ invite.code }}
