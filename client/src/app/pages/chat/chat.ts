@@ -122,6 +122,11 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
   notificationAudio: HTMLAudioElement | null = null;
   recentNotifications: MessageNotification[] = [];
   
+  // Read message tracking
+  private readMessages: Set<string> = new Set(); // Store read message IDs
+  private readonly READ_MESSAGES_KEY = 'discordGym_readMessages';
+  private readonly MAX_READ_MESSAGES = 1000; // Limit to prevent localStorage bloat
+  
   // Modal states
   showServerModal = false;
   showChannelModal = false;
@@ -214,6 +219,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     
     console.log('✅ Current user found:', this.currentUser.username);
+    
+    // Initialize read messages tracking FIRST, before loading any data
+    this.initializeReadMessages();
     
     // Always start with direct messages tab
     this.activeTab = 'direct';
@@ -417,7 +425,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
             this.messages.push(message as unknown as ChatMessage);
             
             // Mark as read since user is viewing
-            this.markDirectMessageAsRead(String(message.senderId));
+            this.markChatAsRead(String(message.senderId), 'direct');
           }
           
           // Update unread counts and favicon
@@ -482,7 +490,11 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       } else {
         console.log('📭 No friends found or friends array is empty');
         this.directMessages = [];
+        this.updateUnreadCount(); // Update count when empty
       }
+      
+      // Update unread count after loading direct messages
+      this.updateUnreadCount();
       
       // Also load available friends for new chats (extract friend data from friendships)
       this.availableFriends = Array.isArray(friendships) 
@@ -552,6 +564,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     console.log('📚 Loading messages for channel:', channel.id);
     await this.loadChannelMessages(channel.id);
     
+    // Mark messages as read when selecting a channel
+    this.markChatAsRead(channel.id, 'channel');
+    
     // Update message count and save state
     this.lastMessageCount = this.messages.length;
     this.saveChatState();
@@ -567,7 +582,6 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedChannel = null;
     
     // Mark messages as read
-    this.markDirectMessageAsRead(dm.userId);
     
     // Load DM history
     console.log('📚 Loading direct message history for:', dm.userId);
@@ -578,6 +592,13 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Reset unread count
     dm.unreadCount = 0;
+    console.log('🔄 Reset unread count for:', dm.username, 'to 0');
+    
+    // Mark messages as read when selecting a chat
+    this.markChatAsRead(dm.userId, 'direct');
+    
+    // Update total unread count after resetting this DM's count
+    this.updateUnreadCount();
     
     // Update message count and save state
     this.lastMessageCount = this.messages.length;
@@ -1317,18 +1338,10 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     if (dm) {
       dm.unreadCount++;
       console.log(`🔔 Updated unread count for ${dm.username}: ${dm.unreadCount}`);
+      this.updateUnreadCount(); // Update total count immediately
     } else {
       // If we don't have this user in our DM list, add them
       this.addNewDirectMessageUser(senderId);
-    }
-  }
-  
-  private markDirectMessageAsRead(userId: string): void {
-    const dm = this.directMessages.find(dm => dm.userId === userId);
-    if (dm && dm.unreadCount > 0) {
-      dm.unreadCount = 0;
-      console.log(`✅ Marked messages as read for ${dm.username}`);
-      this.updateUnreadCount();
     }
   }
   
@@ -1348,6 +1361,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
       
       this.directMessages.unshift(newDM); // Add to top of list
       console.log('🆕 Added new DM user:', newDM.username);
+      this.updateUnreadCount(); // Update total count after adding new user
       
     } catch (error) {
       console.error('❌ Error adding new DM user:', error);
@@ -1742,12 +1756,10 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private addMessageNotification(message: any, type: 'direct' | 'channel'): void {
-    // Don't show notifications for our own messages
-    if (message.senderId === this.currentUser?.id) return;
-    
-    // Don't show notification if we're currently viewing this chat
-    if (type === 'direct' && this.selectedDirectMessage?.userId === message.senderId) return;
-    if (type === 'channel' && this.selectedChannel?.id === message.channelId) return;
+    // Use the new shouldShowNotification method to check if we should display this notification
+    if (!this.shouldShowNotification(message, type)) {
+      return;
+    }
     
     const notification: MessageNotification = {
       id: `notification-${Date.now()}-${Math.random()}`,
@@ -1803,21 +1815,29 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
           const recentMessages = await this.chatService.getDirectMessages(dm.userId, 50, 0);
           const unreadMessages = (recentMessages as any[]).filter(msg => {
             const messageTime = new Date(msg.createdAt);
+            const messageKey = this.getMessageKey(msg, 'direct', dm.userId);
             return messageTime > twentyFourHoursAgo && 
-                   msg.senderId !== this.currentUser!.id;
+                   msg.senderId !== this.currentUser!.id &&
+                   messageKey && !this.isMessageRead(messageKey); // Check if message is read
           });
           
-          // Update unread count
+          // Update unread count based on actually unread messages
           dm.unreadCount = unreadMessages.length;
+          console.log(`📊 Calculated unread count for ${dm.username}: ${dm.unreadCount}`);
           
           // Show notifications for recent messages (up to 3 per friend)
           const recentUnread = unreadMessages.slice(0, 3);
           for (const msg of recentUnread) {
-            this.addMessageNotification({
+            const notificationMessage = {
               ...msg,
               senderUsername: dm.username,
               senderAvatar: dm.avatar
-            }, 'direct');
+            };
+            
+            // Use the new shouldShowNotification logic to prevent duplicate notifications
+            if (this.shouldShowNotification(notificationMessage, 'direct', dm.userId)) {
+              this.addMessageNotification(notificationMessage, 'direct');
+            }
           }
           
         } catch (error) {
@@ -1833,5 +1853,126 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewInit {
     } catch (error) {
       console.error('❌ Error loading recent unread messages:', error);
     }
+  }
+
+  // ===== READ MESSAGE TRACKING SYSTEM =====
+
+  private initializeReadMessages(): void {
+    try {
+      const saved = localStorage.getItem(this.READ_MESSAGES_KEY);
+      if (saved) {
+        const readArray = JSON.parse(saved);
+        this.readMessages = new Set(readArray);
+        console.log('📖 Loaded', this.readMessages.size, 'read messages from storage');
+        console.log('📖 Sample read messages:', Array.from(this.readMessages).slice(0, 5));
+      } else {
+        console.log('📖 No read messages found in storage, starting fresh');
+      }
+    } catch (error) {
+      console.error('❌ Error loading read messages:', error);
+      this.readMessages = new Set();
+    }
+  }
+
+  private saveReadMessages(): void {
+    try {
+      const readArray = Array.from(this.readMessages);
+      // Keep only the most recent read messages to prevent localStorage bloat
+      if (readArray.length > this.MAX_READ_MESSAGES) {
+        const recentMessages = readArray.slice(-this.MAX_READ_MESSAGES);
+        this.readMessages = new Set(recentMessages);
+        console.log('📖 Trimmed read messages to', this.MAX_READ_MESSAGES, 'entries');
+      }
+      localStorage.setItem(this.READ_MESSAGES_KEY, JSON.stringify(Array.from(this.readMessages)));
+      console.log('💾 Saved', this.readMessages.size, 'read messages to storage');
+    } catch (error) {
+      console.error('❌ Error saving read messages:', error);
+    }
+  }
+
+  private markMessageAsRead(messageId: string): void {
+    this.readMessages.add(messageId);
+    console.log('✅ Marked message as read:', messageId, 'Total read messages:', this.readMessages.size);
+    this.saveReadMessages();
+  }
+
+  private isMessageRead(messageId: string): boolean {
+    return this.readMessages.has(messageId);
+  }
+
+  private markChatAsRead(chatId: string, type: 'direct' | 'channel'): void {
+    console.log('📖 Marking chat as read:', chatId, type, 'Total messages loaded:', this.messages.length);
+    
+    // Mark all currently loaded messages as read
+    let markedCount = 0;
+    this.messages.forEach(message => {
+      const messageKey = this.getMessageKey(message, type, chatId);
+      if (messageKey) {
+        this.markMessageAsRead(messageKey);
+        markedCount++;
+      }
+    });
+
+    // Remove any notifications for this chat
+    const notificationsBefore = this.recentNotifications.length;
+    this.recentNotifications = this.recentNotifications.filter(notification => {
+      if (type === 'direct') {
+        return notification.senderId !== chatId;
+      } else {
+        return notification.channelId !== chatId;
+      }
+    });
+    const notificationsRemoved = notificationsBefore - this.recentNotifications.length;
+
+    console.log('📖 Marked', markedCount, 'messages as read, removed', notificationsRemoved, 'notifications for chat:', chatId, type);
+  }
+
+  private getMessageKey(message: any, type: 'direct' | 'channel', chatId: string): string | null {
+    if (!message.id) {
+      console.warn('⚠️ Message has no ID:', message);
+      return null;
+    }
+    
+    if (type === 'direct') {
+      // For direct messages, use the chatId (which is the other user's ID)
+      const messageKey = `dm-${chatId}-${message.id}`;
+      console.log('🔑 Generated direct message key:', messageKey, 'for message:', message.id);
+      return messageKey;
+    } else {
+      // For channel messages, use channelId-messageId format
+      const messageKey = `ch-${chatId}-${message.id}`;
+      console.log('🔑 Generated channel message key:', messageKey, 'for message:', message.id);
+      return messageKey;
+    }
+  }
+
+  private shouldShowNotification(message: any, type: 'direct' | 'channel', chatId?: string): boolean {
+    console.log('🔔 Checking if should show notification for message:', message.id, 'type:', type);
+    
+    // Don't show notifications for our own messages
+    if (message.senderId === this.currentUser?.id) {
+      console.log('🚫 Skipping notification: own message');
+      return false;
+    }
+    
+    // Don't show notification if we're currently viewing this chat
+    if (type === 'direct' && this.selectedDirectMessage?.userId === message.senderId) {
+      console.log('🚫 Skipping notification: currently viewing direct chat');
+      return false;
+    }
+    if (type === 'channel' && this.selectedChannel?.id === message.channelId) {
+      console.log('🚫 Skipping notification: currently viewing channel');
+      return false;
+    }
+    
+    // Check if message has been read
+    const messageKey = this.getMessageKey(message, type, chatId || message.channelId || message.senderId);
+    if (messageKey && this.isMessageRead(messageKey)) {
+      console.log('🚫 Skipping notification for read message:', messageKey);
+      return false;
+    }
+    
+    console.log('✅ Showing notification for message:', messageKey);
+    return true;
   }
 }
